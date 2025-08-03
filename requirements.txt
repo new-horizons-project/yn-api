@@ -1,0 +1,7 @@
+pyjwt[crypto]
+passlib[bcrypt]
+sqlalchemy
+fastapi[standard]
+uvicorn
+pydantic-settings
+pydantic
