@@ -16,6 +16,8 @@ def create_access_token(**kwargs: Any) -> str:
 def create_refresh_token(**kwargs: dict) -> str:
 	kwargs.update(type = "refresh")
 
+	# TODO register token in database
+
 	return create_token(kwargs, settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
 def create_token(data: dict, exp_minutes: int) -> str:
@@ -34,13 +36,15 @@ def decode_token(token: str) -> Dict[str, Any]:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 def validate_refresh_token(credentials: HTTPAuthorizationCredentials) -> Dict[str, Any]:
-    token = credentials.credentials
-    payload = decode_token(token)
+	token = credentials.credentials
+	payload = decode_token(token)
 
-    if payload.get("type") != "refresh":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type"
-        )
+	# TODO check if token exists in database
 
-    return payload
+	if payload.get("type") != "refresh":
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Invalid token type"
+		)
+
+	return payload

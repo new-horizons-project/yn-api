@@ -38,23 +38,12 @@ def login(form: OAuth2PasswordRequestForm = Depends()) -> Token:
 		token_type="bearer",
 	)
 
-@router.post("/refresh/access", response_model=AccessToken)
+@router.post("/renew_access", response_model=AccessToken)
 def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> AccessToken:
-    payload = validate_refresh_token(credentials)
-    new_access_token = create_access_token(**payload)
+	payload = validate_refresh_token(credentials)
+	new_access_token = create_access_token(**payload)
 
-    return AccessToken(
-        access_token=new_access_token,
-        token_type="bearer"
-    )
-
-
-@router.post("/refresh/refresh", response_model=RefreshToken)
-def refresh_refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> RefreshToken:
-    payload = validate_refresh_token(credentials)
-    new_refresh_token = create_refresh_token(**payload)
-    
-    return RefreshToken(
-        refresh_token=new_refresh_token,
-        token_type="bearer"
-    )
+	return AccessToken(
+		access_token=new_access_token,
+		token_type="bearer"
+	)
