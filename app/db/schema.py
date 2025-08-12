@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime
+	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime, Integer
 )
 from sqlalchemy.orm import (
 	Mapped, mapped_column, relationship, DeclarativeBase
@@ -27,6 +27,7 @@ class User(Base):
 
 	topic: Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
 	tokens: Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
+	audit_log: Mapped[list[Audit]] = relationship(back_populates="user")
 
 
 class JWT_Token(Base):
@@ -146,3 +147,27 @@ class TopicLink(Base):
 	away       : Mapped[bool] = mapped_column(Boolean, default=False)
 
 	topic: Mapped[Topic] = relationship(back_populates="links")
+
+
+class Audit(Base):
+	__tablename__ = "audit"
+
+	id               : Mapped[int] = mapped_column(primary_key=True)
+	action_type      : Mapped[ActionType] = mapped_column(SqlEnum(ActionType, native_enum=False), nullable=False)
+	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+	timestamp        : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+	reason           : Mapped[str] = mapped_column(Text, nullable=True)
+
+	user: Mapped[User] = relationship(back_populates="audit_log")
+	effected_object: Mapped[list[AuditEffectedObject]] = relationship(back_populates="audit")
+
+
+class AuditEffectedObject(Base):
+	__tablename__ = "audit_effected_objects"
+
+	id               : Mapped[int] = mapped_column(primary_key=True)
+	audit_id         : Mapped[int] = mapped_column(ForeignKey("audit.id", ondelete="CASCADE"), nullable=False)
+	object_type      : Mapped[ObjectType] = mapped_column(SqlEnum(ObjectType, native_enum=False), nullable=False)
+	object_id        : Mapped[int] = mapped_column(Integer, nullable=False)
+
+	audit: Mapped[Audit] = relationship(back_populates="effected_object")
