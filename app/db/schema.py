@@ -66,6 +66,7 @@ class Topic(Base):
 	created_at         : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+	image_url          : Mapped[str] = mapped_column(String(500), nullable=True)
 
 	creator: Mapped[User] = relationship(back_populates="topic")
 	translations: Mapped[list[TopicTranslation]] = relationship(back_populates="topic", cascade="all, delete-orphan")
