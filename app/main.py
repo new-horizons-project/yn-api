@@ -5,4 +5,6 @@ from .routers import auth_router
 
 app = FastAPI(title="Yoshino Niku Project API", version="0.0.1")
 
+init_db()
+
 app.include_router(auth_router)
