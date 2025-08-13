@@ -12,5 +12,7 @@ class Config(BaseSettings):
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 	REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 	DATABASE_URL: str
+	PASSWORD_STRENGTH_POLICY: int = 2
+	PASSWORD_MIN_LENGTH: int = 8
 
 settings = Config()

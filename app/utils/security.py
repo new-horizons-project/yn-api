@@ -5,9 +5,37 @@ import jwt
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from passlib.context import CryptContext
 
 from ..config import settings 
 
+passwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+	return passwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+	return passwd_context.verify(plain_password, hashed_password)
+
+def check_password_strength(password: str) -> bool:
+	password_type: int = 0
+
+	if len(password) < settings.PASSWORD_MIN_LENGTH:
+		return False
+	
+	if any(char.isdigit() for char in password):
+		password_type += 1
+	if any(char.isalpha() for char in password):
+		password_type += 1
+	if any(char.isupper() for char in password):
+		password_type += 1
+	if any(char.islower() for char in password):
+		password_type += 1
+
+	if password_type < settings.PASSWORD_STRENGTH_POLICY:
+		return False
+	
+	return True
 
 def create_access_token(**kwargs: Any) -> str:
 	kwargs.update(type = "access")
