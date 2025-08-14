@@ -10,11 +10,6 @@ class ParseMode(Enum):
 	bbcode   = "BBCode"
 
 
-class JWT_Type(Enum):
-	access  = "access"
-	refresh = "refresh"
-
-
 class UserRoles(Enum):
 	admin     = "admin"
 	user      = "user"

@@ -16,6 +16,11 @@ class ResetPasswordRequest(BaseModel):
 	password: str
 
 
+class UserResetPasswordRequest(BaseModel):
+	old_password: str
+	new_password: str
+
+
 class UserCreateRequest(BaseModel):
 	username: str
 	password: str

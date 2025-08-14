@@ -25,3 +25,5 @@ app = FastAPI(title="Yoshino Niku Project API", version="0.0.1", lifespan=lifesp
 
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(jwt_router)
+app.include_router(admin_router)

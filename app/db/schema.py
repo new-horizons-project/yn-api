@@ -25,19 +25,18 @@ class User(Base):
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
 
-	topic: Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
-	tokens: Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
-	audit_log: Mapped[list[Audit]] = relationship(back_populates="user")
+	topic        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
+	tokens       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
+	audit_log    : Mapped[list[Audit]] = relationship(back_populates="user")
 
 
 class JWT_Token(Base):
 	__tablename__ = "jwt_tokens"
 
-	id               : Mapped[int] = mapped_column(primary_key=True)
+	id               : Mapped[str] = mapped_column(primary_key=True, unique=True)
 	token            : Mapped[str] = mapped_column(Text, nullable=False)
 	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 	created          : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
-	type             : Mapped[JWT_Type] = mapped_column(SqlEnum(JWT_Type, native_enum=False))
 	last_used        : Mapped[datetime] = mapped_column(DateTime, nullable=False)
 	device_name      : Mapped[str] = mapped_column(String(100), nullable=False)
 	on_creation_ip   : Mapped[str] = mapped_column(String(45), nullable=False)
