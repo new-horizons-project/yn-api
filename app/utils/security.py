@@ -2,11 +2,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 import jwt
+import hashlib
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 
+from ..db.enums import JWT_Type
 from ..config import settings 
 
 passwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -38,11 +40,11 @@ def check_password_strength(password: str) -> bool:
 	return True
 
 def create_access_token(**kwargs: Any) -> str:
-	kwargs.update(type = "access")
+	kwargs.update(type = JWT_Type.access.value)
 	return create_token(kwargs, settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 def create_refresh_token(**kwargs: dict) -> str:
-	kwargs.update(type = "refresh")
+	kwargs.update(type = JWT_Type.refresh.value)
 
 	# TODO register token in database
 
@@ -69,10 +71,15 @@ def validate_refresh_token(credentials: HTTPAuthorizationCredentials) -> Dict[st
 
 	# TODO check if token exists in database
 
-	if payload.get("type") != "refresh":
+	if payload.get("type") != JWT_Type.refresh.value:
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Invalid token type"
 		)
 
 	return payload
+
+def hash_topic_name(name: str) -> str:
+	hasher = hashlib.sha256()
+	hasher.update(name.encode("utf-8"))
+	return hasher.hexdigest()
