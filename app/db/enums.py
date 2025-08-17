@@ -5,7 +5,7 @@ class DisplayMode(Enum):
 	wiki     = "Wiki"
 
 
-class ParseMode(Enum):
+class ParseMode(str, Enum):
 	markdown = "Markdown"
 	bbcode   = "BBCode"
 
