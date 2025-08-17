@@ -29,7 +29,7 @@ async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSe
 async def get_topic(topic_id: int, db: AsyncSession) -> schema.Topic | None:
 	return await db.get(schema.Topic, topic_id)
 
-async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> schema.Topic:
+async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> int:
 	new_topic = schema.Topic(
 		name=topic.name,
 		name_hash=hash_topic_name(topic.name),
