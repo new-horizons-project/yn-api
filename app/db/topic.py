@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists, insert
 
 from . import schema
 from ..schema.topics import TopicCreateRequst
@@ -8,6 +8,26 @@ from ..utils.security import hash_topic_name
 async def get_topic_list(db: AsyncSession) -> list[schema.Topic]:
 	res = await db.execute(select(schema.Topic))
 	return res.scalars().all()
+
+async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[schema.TopicTranslation]:
+	res = await db.execute(
+		select(schema.TopicTranslation)
+		.where(schema.TopicTranslation.topic_id == topic_id)
+	)
+	return res.scalars().all()
+
+async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> schema.TopicTranslation | None:
+	res = await db.execute(
+		select(schema.TopicTranslation)
+		.where(
+			schema.TopicTranslation.topic_id == topic_id, 
+			schema.TopicTranslation.id == translation_id
+		)
+	)
+	return res.scalars().first()
+
+async def get_topic(topic_id: int, db: AsyncSession) -> schema.Topic | None:
+	return await db.get(schema.Topic, topic_id)
 
 async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> schema.Topic:
 	new_topic = schema.Topic(
@@ -29,3 +49,18 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> schema.Top
 	await db.refresh(new_topic)
 	
 	return new_topic
+
+async def create_base_translation(db: AsyncSession) -> None:
+	if await db.scalar(
+        select(exists().select_from(schema.Translation))
+    ): return
+
+	await db.execute(
+		insert(schema.Translation).values(
+			{"translation_code": "en", "full_name": "English"},
+			{"translation_code": "ua", "full_name": "Ukrainian"},
+			{"translation_code": "kz", "full_name": "Kazakh"},
+		)
+	)
+	await db.commit()
+
