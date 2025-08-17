@@ -48,7 +48,7 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> schema.Top
 	await db.commit()
 	await db.refresh(new_topic)
 	
-	return new_topic
+	return new_topic.id
 
 async def create_base_translation(db: AsyncSession) -> None:
 	if await db.scalar(

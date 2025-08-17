@@ -8,7 +8,6 @@ from ..db.enums import ParseMode
 class TopicBase(BaseModel):
     id: int
     name: str
-    name_hash: str
     created_at: datetime
     edited_at: datetime
     creator_user_id: Optional[int]
@@ -41,7 +40,7 @@ class ChangeNameRequst(BaseModel):
 class TranslationCreateRequst(BaseModel):
 	topic_id:        int
 	creator_user_id: int
-	translation_id:  int
+	translation_code_id: int
 	image_url:       Optional[str]
 	parse_mode:      ParseMode
 	text:            str

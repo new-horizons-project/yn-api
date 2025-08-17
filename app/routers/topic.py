@@ -24,14 +24,14 @@ async def get_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 async def get_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 	return await topic_db.get_topic_translations_list(topic_id, db)
 
-@router.get("/{topic_id}/translations/{translation_id}", response_model=list[topics.TopicTranslationBase])
+@router.get("/{topic_id}/translations/{translation_id}", response_model=topics.TopicTranslationBase)
 async def get_topic(topic_id: int, translation_id: int, db: AsyncSession = Depends(get_session)):
 	return await topic_db.get_topic_translations(topic_id, translation_id, db)
 
 @router.post("/create")
 async def create_topic(topic: topics.TopicCreateRequst, db: AsyncSession = Depends(get_session)):
-	new_topic = await topic_db.create_topic(db, topic)
-	return {"detail": "Topic created successfully", "topic_id": new_topic.id}
+	new_topic_id = await topic_db.create_topic(db, topic)
+	return {"detail": "Topic created successfully", "topic_id": new_topic_id}
 
 @router.put("/{topic_id}/change_name")
 async def change_name(topic_id: int, 
@@ -55,7 +55,7 @@ async def add_translation(topic_id: int,
 						  translation: topics.TranslationCreateRequst, 
 						  db: AsyncSession = Depends(get_session)) -> schema.TopicTranslation:
 	new_translation = schema.TopicTranslation(
-		translation_id = translation.translation_id,
+		translation_id = translation.translation_code_id,
 		topic_id       = topic_id,
 		parse_mode     = translation.parse_mode,
 		text           = translation.text
