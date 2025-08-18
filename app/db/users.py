@@ -38,7 +38,6 @@ async def create_root_user(db: AsyncSession):
 		)
 		db.add(root_user)
 		await db.commit()
-		await db.refresh(root_user)
 
 
 async def change_user_availability(db: AsyncSession, user_id: int, is_disabled: bool) -> bool:

@@ -5,7 +5,7 @@ from typing import Annotated
 from ..db import jwt as jwtdb, get_session
 from ..schema import users, token
 
-router = APIRouter(prefix="/jwt", tags=["JWT Control"])
+router = APIRouter(prefix="/admin/jwt", tags=["JWT Control"])
 
 
 @router.get("/list", response_model=list[token.JWTUserToken])

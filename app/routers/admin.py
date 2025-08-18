@@ -73,5 +73,4 @@ async def reset_user_password(user_id: int,
 
 	db.add(user)
 	await db.commit()
-	await db.refresh(user)
 	return {"detail": "Password reset successfully"}

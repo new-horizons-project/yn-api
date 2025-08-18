@@ -26,3 +26,5 @@ async def init_db():
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
 	async with session_local() as session:
 		yield session
+
+__all__ = ["init_db", "get_session"]

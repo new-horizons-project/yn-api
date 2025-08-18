@@ -59,7 +59,7 @@ class Translation(Base):
 class Topic(Base):
 	__tablename__ = "topic"
 
-	id                 : Mapped[int] = mapped_column(primary_key=True)
+	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	name               : Mapped[str] = mapped_column(String(200), nullable=False)
 	name_hash          : Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
 	created_at         : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))

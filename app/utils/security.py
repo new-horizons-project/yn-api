@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 import uuid
+import string
 
 import jwt
 from fastapi import HTTPException, status
@@ -15,28 +16,34 @@ passwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def hash_password(password: str) -> str:
 	return passwd_context.hash(password)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
 	return passwd_context.verify(plain_password, hashed_password)
 
+
 def check_password_strength(password: str) -> bool:
-	password_type: int = 0
+	policy_lower   : int = 0
+	policy_higher  : int = 0
+	policy_special : int = 0
+	policy_digit   : int = 0
 
 	if len(password) < settings.PASSWORD_MIN_LENGTH:
 		return False
-	
-	if any(char.isdigit() for char in password):
-		password_type += 1
-	if any(char.isalpha() for char in password):
-		password_type += 1
-	if any(char.isupper() for char in password):
-		password_type += 1
-	if any(char.islower() for char in password):
-		password_type += 1
 
-	if password_type < settings.PASSWORD_STRENGTH_POLICY:
-		return False
+	for char in password:
+		if char.isdigit():
+			policy_digit = 1
+		elif char.islower():
+			policy_lower = 1
+		elif char.isupper():
+			policy_higher = 1
+		elif char in string.punctuation:
+			policy_special = 1
 	
-	return True
+	return True if (
+		policy_lower + policy_higher + policy_special + policy_digit
+	) >= settings.PASSWORD_STRENGTH_POLICY else False
+
 
 def create_access_token(**kwargs: Any) -> str:
 	kwargs.update(type = "access")

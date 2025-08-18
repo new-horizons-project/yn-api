@@ -1,28 +1,28 @@
 from enum import Enum
 
-class DisplayMode(Enum):
+class DisplayMode(str, Enum):
 	standard = "Standard"
 	wiki     = "Wiki"
 
 
-class ParseMode(Enum):
+class ParseMode(str, Enum):
 	markdown = "Markdown"
 	bbcode   = "BBCode"
 
 
-class UserRoles(Enum):
+class UserRoles(str, Enum):
 	admin     = "admin"
 	user      = "user"
 	moderator = "moderator"
 
 
-class ActionType(Enum):
+class ActionType(str, Enum):
 	create = "create"
 	update = "update"
 	delete = "delete"
 
 
-class ObjectType(Enum):
+class ObjectType(str, Enum):
 	user                 = "user"
 	topic                = "topic"
 	topic_translation    = "translation"

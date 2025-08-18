@@ -21,7 +21,6 @@ async def get_jwt_token_by_user_id(db: AsyncSession, user_id: int) -> list[schem
 async def register_jwt_token(db: AsyncSession, token: schema.JWT_Token):
 	db.add(token)
 	await db.commit()
-	await db.refresh(token)
 
 
 async def revoke_jwt_token(db: AsyncSession, token_id: int) -> bool:
