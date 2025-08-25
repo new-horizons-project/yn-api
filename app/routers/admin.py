@@ -3,11 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
 from ..utils.security import check_password_strength, verify_password
-from ..db import users as udbfunc, get_session
+from ..utils.jwt import jwt_auth_check_permission
+from ..db import users as udbfunc, get_session, jwt as jwtdb
 from ..config import settings
-from ..schema import users
+from ..schema import users, token
+from ..db.enums import UserRoles
 
-router = APIRouter(prefix="/admin")
+router = APIRouter(prefix="/admin", 
+	dependencies=[
+			Depends(jwt_auth_check_permission([UserRoles.admin]))
+		]
+)
 
 @router.get("/users", response_model=list[users.UserBase], tags=["Admin User"])
 async def users_list(db: AsyncSession = Depends(get_session)):
@@ -74,3 +80,45 @@ async def reset_user_password(user_id: int,
 	db.add(user)
 	await db.commit()
 	return {"detail": "Password reset successfully"}
+
+
+@router.delete("/user/{user_id}/delete", tags=["Admin User"])
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
+	try:
+		success = await udbfunc.delete_user(db, user_id)
+	except udbfunc.RootUserException:
+		raise HTTPException(status_code=400, detail="Cannot delete the root user")
+
+	if not success:
+		raise HTTPException(status_code=404, detail="User not found")
+	
+	return {"detail": "User deleted successfully"}
+
+
+@router.patch("/user/{user_id}/change_role", tags=["Admin User"])
+async def change_user_role(user_id: int, new_role: Annotated[UserRoles, Query()],
+						   db: AsyncSession = Depends(get_session)):
+	try:
+		success = await udbfunc.update_role(db, user_id, new_role)
+	except udbfunc.RootUserException:
+		raise HTTPException(status_code=400, detail="Cannot change role of the root user")
+	except ValueError as e:
+		raise HTTPException(status_code=400, detail=str(e))
+
+	if not success:
+		raise HTTPException(status_code=404, detail="User not found")
+	
+	return {"detail": "User role changed successfully"}
+
+
+@router.get("/jwt", response_model=list[token.JWTUserToken], tags=["Admin JWT"])
+async def jwt_list(db: AsyncSession = Depends(get_session)):
+	return await jwtdb.get_jwt_tokens_list(db)
+
+
+@router.post("/jwt/{token_id}/revoke", response_model=dict, tags=["Admin JWT"])
+async def revoke_jwt(token_id: str, db: AsyncSession = Depends(get_session)):
+	if not await jwtdb.revoke_jwt_token(db, token_id):
+		raise HTTPException(status_code=404, detail="Token not found")
+	
+	return {"detail": "Token revoked successfully"}

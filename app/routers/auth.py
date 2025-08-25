@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..schema.token import Token, AccessToken, RefreshToken
 from ..utils.security import (
-	create_access_token, create_refresh_token, validate_refresh_token
+	create_access_token, create_refresh_token, validate_refresh_token, decode_token
 )
 from ..db import get_session, schema, users as udbfunc
 
@@ -45,8 +45,8 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 			detail="User must change password"
 		)
 
-	access_token = create_access_token(sub=user.id)
-	refresh_token = create_refresh_token(sub=user.id)
+	access_token = create_access_token(sub=str(user.id))
+	refresh_token = create_refresh_token(sub=str(user.id))
 
 	db_refresh_token = schema.JWT_Token(
 		id=refresh_token[1],
@@ -74,8 +74,9 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 	)
 
 @router.post("/renew_access", response_model=AccessToken)
-def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> AccessToken:
-	payload = validate_refresh_token(credentials)
+async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depends(security),
+							   db: AsyncSession = Depends(get_session)) -> AccessToken:
+	payload = await validate_refresh_token(credentials, db)
 	new_access_token = create_access_token(**payload)
 
 	return AccessToken(

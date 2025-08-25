@@ -21,9 +21,8 @@ async def lifespan(app: FastAPI):
 		await session.close()
 
 
-app = FastAPI(title="Yoshino Niku Project API", version="0.0.1", lifespan=lifespan)
+app = FastAPI(title="New Horizons API", version="0.0.1", lifespan=lifespan)
 
 app.include_router(auth_router)
 app.include_router(user_router)
-app.include_router(jwt_router)
 app.include_router(admin_router)
