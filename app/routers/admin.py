@@ -32,7 +32,7 @@ async def create_user(user: users.UserCreateRequest, db: AsyncSession = Depends(
 	return {"detail": "User created successfully", "user_id": new_user.id}
 
 
-@router.put("/user/{user_id}/deactivate", tags=["Admin User"])
+@router.put("/user/{user_id}/deactivate", tags=["Admin User"], response_model=users.UserBase)
 async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
 	try:
 		user = await udbfunc.change_user_availability(db, user_id, True)
@@ -45,7 +45,7 @@ async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_session))
 	return user
 
 
-@router.put("/user/{user_id}/reactivate", tags=["Admin User"])
+@router.put("/user/{user_id}/reactivate", tags=["Admin User"], response_model=users.UserBase)
 async def reactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
 	try:	
 		user = await udbfunc.change_user_availability(db, user_id, False)
@@ -95,7 +95,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
 	return {"detail": "User deleted successfully"}
 
 
-@router.patch("/user/{user_id}/change_role", tags=["Admin User"])
+@router.patch("/user/{user_id}/change_role", tags=["Admin User"], response_model=users.UserBase)
 async def change_user_role(user_id: int, new_role: Annotated[UserRoles, Query()],
 						   db: AsyncSession = Depends(get_session)):
 	try:

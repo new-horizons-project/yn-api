@@ -4,7 +4,7 @@ from typing import Annotated
 
 from ..utils.security import check_password_strength, verify_password
 from ..utils.jwt import jwt_extract_user_id, jwt_auth_check_permission
-from ..db import users as udbfunc, get_session
+from ..db import users as udbfunc, get_session, jwt as jwtdb
 from ..db.enums import UserRoles
 from ..config import settings
 from ..schema import users
@@ -21,6 +21,11 @@ router = APIRouter(
 	]	
 )
 
+router_public = APIRouter(
+	prefix="/user",
+	tags=["User"]
+)
+
 
 @router.get("/", response_model=users.UserBase)
 async def get_user(user_id: int = Depends(jwt_extract_user_id), db: AsyncSession = Depends(get_session)):
@@ -32,7 +37,7 @@ async def get_user(user_id: int = Depends(jwt_extract_user_id), db: AsyncSession
 	return user
 
 
-@router.put("/change_username")
+@router.put("/change_username", response_model=users.UserBase)
 async def change_username(new_username: str, user_id: int = Depends(jwt_extract_user_id), 
 						  db: AsyncSession = Depends(get_session)):
 	try:
@@ -48,11 +53,11 @@ async def change_username(new_username: str, user_id: int = Depends(jwt_extract_
 	return user
 
 
-@router.patch("/reset_password")
-async def reset_password(username: str,
-						  req: users.UserResetPasswordRequest,
+@router.patch("/change_password")
+async def change_password(req: users.UserResetPasswordRequest,
+						  user_id: int = Depends(jwt_extract_user_id),
 						  db: AsyncSession = Depends(get_session)):
-	user = await udbfunc.get_user_by_username(db, username)
+	user = await udbfunc.get_user_by_id(db, user_id)
 
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
@@ -71,11 +76,45 @@ async def reset_password(username: str,
 	return {"detail": "Password changed successfully"}
 
 
-@router.patch("/change_password")
-async def change_password(req: users.UserResetPasswordRequest,
-						  user_id: int = Depends(jwt_extract_user_id),
-						  db: AsyncSession = Depends(get_session)):
-	user = await udbfunc.get_user_by_id(db, user_id)
+@router.get("/jwt/", response_model=list[users.JWTUserMinimal])
+async def get_jwt(user_id: int = Depends(jwt_extract_user_id),
+				  db: AsyncSession = Depends(get_session)):
+	return await jwtdb.get_jwt_token_by_user_id(db, user_id)
+
+
+@router.patch("/jwt/{jwt_id}")
+async def revoke_session(jwt_id: str, 
+						 user_id: int = Depends(jwt_extract_user_id),
+						 db: AsyncSession = Depends(get_session)):
+	token = await jwtdb.get_jwt_token_by_id(db, jwt_id)
+
+	if not token:
+		raise HTTPException(
+			status_code=404,
+			detail="Invalid token id"
+		)
+	
+	if token.is_revoked:
+		raise HTTPException(
+			status_code=400,
+			detail="Session already revoked"
+		)
+
+	if token.user_id != user_id:
+		raise HTTPException(
+			status_code = 400,
+			detail = "Invalid token"
+		)
+
+	await jwtdb.revoke_jwt_token(db, token.id)
+	return {"detail": "Session revoked"}
+
+
+@router_public.patch("/reset_password")
+async def reset_password(username: str,
+						 req: users.UserResetPasswordRequest,
+						 db: AsyncSession = Depends(get_session)):
+	user = await udbfunc.get_user_by_username(db, username)
 
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")

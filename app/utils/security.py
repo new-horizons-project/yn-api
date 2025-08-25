@@ -75,7 +75,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 	try:
 		return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 	except ExpiredSignatureError:
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid expired")
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
 	except InvalidTokenError:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

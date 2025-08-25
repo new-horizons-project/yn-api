@@ -17,7 +17,8 @@ from ..schema.token import Token, AccessToken, RefreshToken
 from ..utils.security import (
 	create_access_token, create_refresh_token, validate_refresh_token
 )
-from ..db import get_session, schema, users as udbfunc
+from ..db import get_session, schema, users as udbfunc, jwt as jwtdb
+from ..db.enums import JWT_Type
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -33,6 +34,12 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 			detail="User not found"
 		)
 	
+	if user.is_disabled: 
+		raise HTTPException(
+			status_code=403,
+			detail="User is disabled"
+		)
+
 	if not udbfunc.verify_password(form.password, user.password_hash):
 		raise HTTPException(
 			status_code=400, 
@@ -79,7 +86,7 @@ async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depen
 							   db: AsyncSession = Depends(get_session)) -> AccessToken:
 	payload = await validate_refresh_token(credentials, db)
 
-	if payload.get("type") != "refresh":
+	if payload.get("type") != JWT_Type.refresh.value:
 		raise HTTPException(status_code=401, detail="Invalid token type")
 
 	new_access_token = create_access_token(**payload)
@@ -88,3 +95,15 @@ async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depen
 		access_token=new_access_token,
 		token_type="bearer"
 	)
+
+
+@router.post("/logout")
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(security),
+				 db: AsyncSession = Depends(get_session)):
+	payload = await validate_refresh_token(credentials, db)
+
+	if not await jwtdb.revoke_jwt_token(db, payload.get("jti")):
+		raise HTTPException(status_code=401, detail="Token not found")
+	
+	return {"detail": "Token revoked"}
+	

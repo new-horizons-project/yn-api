@@ -44,4 +44,4 @@ async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depend
 	if not user_id:
 		raise HTTPException(status_code=401, detail="Invalid token payload")
 
-	return user_id
+	return int(user_id)
