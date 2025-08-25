@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import (
 	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime, Integer
@@ -49,8 +50,8 @@ class JWT_Token(Base):
 class Translation(Base):
 	__tablename__ = "translations"
 
-	id                 : Mapped[int] = mapped_column(primary_key=True)
-	translation_code   : Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	translation_code   : Mapped[str] = mapped_column(String(2), unique=True, nullable=False, index=True)
 	full_name          : Mapped[str] = mapped_column(String(100), nullable=False)
 
 	topic_translations: Mapped[list[TopicTranslation]] = relationship(back_populates="translation", cascade="all, delete-orphan")
@@ -65,7 +66,7 @@ class Topic(Base):
 	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-	image_url          : Mapped[str] = mapped_column(String(500), nullable=True)
+	image_url          : Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
 	creator: Mapped[User] = relationship(back_populates="topic")
 	translations: Mapped[list[TopicTranslation]] = relationship(back_populates="topic", cascade="all, delete-orphan")

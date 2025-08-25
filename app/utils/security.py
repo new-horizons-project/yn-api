@@ -4,14 +4,16 @@ import uuid
 import string
 
 import jwt
+import hashlib
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 
-from ..config import settings
 from ..db.jwt import check_jwt_token
+from ..db.enums import JWT_Type
+from ..config import settings 
 
 passwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -48,7 +50,7 @@ def check_password_strength(password: str) -> bool:
 
 
 def create_access_token(**kwargs: Any) -> str:
-	kwargs.update(type = "access")
+	kwargs.update(type = JWT_Type.access.value)
 	return create_token(kwargs, settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 
@@ -85,10 +87,15 @@ async def validate_refresh_token(credentials: HTTPAuthorizationCredentials, db: 
 	if not await check_jwt_token(db, token):
 			raise HTTPException(status_code=401, detail="Token is revoked or invalid")
 
-	if payload.get("type") != "refresh":
+	if payload.get("type") != JWT_Type.refresh.value:
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Invalid token type"
 		)
 
 	return payload
+
+def hash_topic_name(name: str) -> str:
+	hasher = hashlib.sha256()
+	hasher.update(name.encode("utf-8"))
+	return hasher.hexdigest()
