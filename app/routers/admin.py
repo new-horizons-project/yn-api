@@ -35,27 +35,27 @@ async def create_user(user: users.UserCreateRequest, db: AsyncSession = Depends(
 @router.put("/user/{user_id}/deactivate", tags=["Admin User"])
 async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
 	try:
-		success = await udbfunc.change_user_availability(db, user_id, True)
+		user = await udbfunc.change_user_availability(db, user_id, True)
 	except udbfunc.RootUserException:
 		raise HTTPException(status_code=400, detail="Cannot deactivate the root user")
 
-	if not success:
+	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 	
-	return {"detail": "User deactivated successfully"}
+	return user
 
 
 @router.put("/user/{user_id}/reactivate", tags=["Admin User"])
 async def reactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
 	try:	
-		success = await udbfunc.change_user_availability(db, user_id, False)
+		user = await udbfunc.change_user_availability(db, user_id, False)
 	except udbfunc.RootUserException:
 		raise HTTPException(status_code=400, detail="Cannot reactivate the root user")
 
-	if not success:
+	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 	
-	return {"detail": "User reactivated successfully"}
+	return user
 
 
 @router.patch("/user/{user_id}/reset_password", tags=["Admin User"])
@@ -99,16 +99,16 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
 async def change_user_role(user_id: int, new_role: Annotated[UserRoles, Query()],
 						   db: AsyncSession = Depends(get_session)):
 	try:
-		success = await udbfunc.update_role(db, user_id, new_role)
+		user = await udbfunc.update_role(db, user_id, new_role)
 	except udbfunc.RootUserException:
 		raise HTTPException(status_code=400, detail="Cannot change role of the root user")
 	except ValueError as e:
 		raise HTTPException(status_code=400, detail=str(e))
 
-	if not success:
+	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 	
-	return {"detail": "User role changed successfully"}
+	return user
 
 
 @router.get("/jwt", response_model=list[token.JWTUserToken], tags=["Admin JWT"])

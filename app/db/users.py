@@ -40,14 +40,14 @@ async def create_root_user(db: AsyncSession):
 		await db.commit()
 
 
-async def change_user_availability(db: AsyncSession, user_id: int, is_disabled: bool) -> bool:
+async def change_user_availability(db: AsyncSession, user_id: int, is_disabled: bool) -> schema.User | None:
 	if user_id == 1:
 		raise RootUserException()
 	
 	user = await get_user_by_id(db, user_id)
 
 	if not user:
-		return False
+		return None
 
 	user.is_disabled = is_disabled
 
@@ -55,7 +55,7 @@ async def change_user_availability(db: AsyncSession, user_id: int, is_disabled: 
 	await db.commit()
 	await db.refresh(user)
 
-	return True
+	return user
 
 
 async def create_user(db: AsyncSession, user: UserCreateRequest) -> schema.User:
@@ -106,7 +106,7 @@ async def delete_user(db: AsyncSession, user_id: int) -> bool:
 	return True
 
 
-async def change_username(db: AsyncSession, user_id: int, new_username: str) -> bool:
+async def change_username(db: AsyncSession, user_id: int, new_username: str) -> schema.User | None:
 	if user_id == 1:
 		raise RootUserException()
 
@@ -117,14 +117,14 @@ async def change_username(db: AsyncSession, user_id: int, new_username: str) -> 
 
 	user = await get_user_by_id(db, user_id)
 	if not user:
-		return False
+		return None
 
 	user.username = new_username
 	db.add(user)
 	await db.commit()
 	await db.refresh(user)
 
-	return True
+	return user
 
 
 async def change_password(db: AsyncSession,
@@ -141,6 +141,5 @@ async def change_password(db: AsyncSession,
 
 	db.add(user)
 	await db.commit()
-	await db.refresh(user)
 
 	return True

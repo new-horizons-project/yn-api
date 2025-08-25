@@ -36,16 +36,16 @@ async def get_user(user_id: int = Depends(jwt_extract_user_id), db: AsyncSession
 async def change_username(new_username: str, user_id: int = Depends(jwt_extract_user_id), 
 						  db: AsyncSession = Depends(get_session)):
 	try:
-		res = await udbfunc.change_username(db, user_id, new_username)
+		user = await udbfunc.change_username(db, user_id, new_username)
 
-		if not res:
+		if not user:
 			raise HTTPException(status_code=404, detail="User not found")
 	except udbfunc.RootUserException:
 		raise HTTPException(status_code=400, detail="Cannot change username of the root user")
 	except ValueError as e:
 		raise HTTPException(status_code=400, detail=str(e))
 
-	return {"detail": "Username changed successfully"}
+	return user
 
 
 @router.patch("/reset_password")
