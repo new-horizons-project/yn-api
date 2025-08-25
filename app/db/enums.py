@@ -32,3 +32,7 @@ class ObjectType(str, Enum):
 	topic_link           = "topic_link"
 	jwt_token            = "jwt_token"
 	
+
+class JWT_Type(str, Enum):
+	access  = "access"
+	refresh = "refresh"

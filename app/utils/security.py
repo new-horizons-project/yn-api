@@ -57,7 +57,7 @@ def create_access_token(**kwargs: Any) -> str:
 def create_refresh_token(**kwargs: dict) -> tuple[str, str]:
 	jti = str(uuid.uuid4())
 
-	kwargs.update(type="refresh")
+	kwargs.update(type=JWT_Type.refresh.value)
 	kwargs.update(jti=jti)
 
 	return (create_token(kwargs, settings.REFRESH_TOKEN_EXPIRE_MINUTES), jti)

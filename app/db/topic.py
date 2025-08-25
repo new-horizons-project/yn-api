@@ -57,9 +57,11 @@ async def create_base_translation(db: AsyncSession) -> None:
 
 	await db.execute(
 		insert(schema.Translation).values(
-			{"translation_code": "en", "full_name": "English"},
-			{"translation_code": "ua", "full_name": "Ukrainian"},
-			{"translation_code": "kz", "full_name": "Kazakh"},
+			[
+				{"translation_code": "en", "full_name": "English"},
+				{"translation_code": "ua", "full_name": "Ukrainian"},
+				{"translation_code": "kz", "full_name": "Kazakh"}
+			]
 		)
 	)
 	await db.commit()
