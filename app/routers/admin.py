@@ -2,7 +2,7 @@ from fastapi import Depends, APIRouter, HTTPException, Body, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from ..utils.security import check_password_strength, verify_password
+from ..utils.security import check_password_strength
 from ..utils.jwt import jwt_auth_check_permission
 from ..db import users as udbfunc, get_session, jwt as jwtdb
 from ..config import settings

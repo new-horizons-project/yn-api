@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.enums import UserRoles
 from ..db import get_session
-from ..db.jwt import check_jwt_token
 from ..db.users import get_user_by_id
 from .security import decode_token
 
 security = HTTPBearer()
 
 def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
-	async def wrapper(credentials: HTTPAuthorizationCredentials = Depends(security), db: AsyncSession = Depends(get_session)):
+	async def wrapper(credentials: HTTPAuthorizationCredentials = Depends(security),
+				      db: AsyncSession = Depends(get_session)):
 		token = credentials.credentials
 		payload = decode_token(token)
 		user_id = payload.get("sub")
@@ -36,8 +36,7 @@ def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 	return wrapper
 
 
-async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depends(security),
-							  db: AsyncSession = Depends(get_session)) -> int:
+async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
 	token = credentials.credentials
 	payload = decode_token(token)
 	user_id = payload.get("sub")

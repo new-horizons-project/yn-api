@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..schema.token import Token, AccessToken, RefreshToken
 from ..utils.security import (
-	create_access_token, create_refresh_token, validate_refresh_token, decode_token
+	create_access_token, create_refresh_token, validate_refresh_token
 )
 from ..db import get_session, schema, users as udbfunc
 
@@ -73,10 +73,15 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 		token_type="bearer",
 	)
 
+
 @router.post("/renew_access", response_model=AccessToken)
 async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depends(security),
 							   db: AsyncSession = Depends(get_session)) -> AccessToken:
 	payload = await validate_refresh_token(credentials, db)
+
+	if payload.get("type") != "refresh":
+		raise HTTPException(status_code=401, detail="Invalid token type")
+
 	new_access_token = create_access_token(**payload)
 
 	return AccessToken(

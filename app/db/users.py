@@ -127,9 +127,10 @@ async def change_username(db: AsyncSession, user_id: int, new_username: str) -> 
 	return True
 
 
-async def change_password(
-	db: AsyncSession, user_id: int, new_password: str, force_password_change: bool
-) -> bool:
+async def change_password(db: AsyncSession,
+						  user_id: int,
+						  new_password: str,
+						  force_password_change: bool) -> bool:
 	user = await get_user_by_id(db, user_id)
 
 	if not user:
