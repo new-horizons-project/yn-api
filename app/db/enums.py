@@ -1,6 +1,6 @@
 from enum import Enum
 
-class DisplayMode(Enum):
+class DisplayMode(str, Enum):
 	standard = "Standard"
 	wiki     = "Wiki"
 
@@ -10,24 +10,19 @@ class ParseMode(str, Enum):
 	bbcode   = "BBCode"
 
 
-class JWT_Type(Enum):
-	access  = "access"
-	refresh = "refresh"
-
-
-class UserRoles(Enum):
+class UserRoles(str, Enum):
 	admin     = "admin"
 	user      = "user"
 	moderator = "moderator"
 
 
-class ActionType(Enum):
+class ActionType(str, Enum):
 	create = "create"
 	update = "update"
 	delete = "delete"
 
 
-class ObjectType(Enum):
+class ObjectType(str, Enum):
 	user                 = "user"
 	topic                = "topic"
 	topic_translation    = "translation"
@@ -37,3 +32,7 @@ class ObjectType(Enum):
 	topic_link           = "topic_link"
 	jwt_token            = "jwt_token"
 	
+
+class JWT_Type(str, Enum):
+	access  = "access"
+	refresh = "refresh"

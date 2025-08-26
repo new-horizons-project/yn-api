@@ -21,28 +21,27 @@ class User(Base):
 	id                       : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	username                 : Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 	password_hash            : Mapped[str] = mapped_column(String(255), nullable=False)
-	registration_date        : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+	registration_date        : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 	role                     : Mapped[str] = mapped_column(SqlEnum(UserRoles, native_enum=False), default=UserRoles.user)
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
 
-	topic: Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
-	tokens: Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
-	audit_log: Mapped[list[Audit]] = relationship(back_populates="user")
+	topic        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
+	tokens       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
+	audit_log    : Mapped[list[Audit]] = relationship(back_populates="user")
 
 
 class JWT_Token(Base):
 	__tablename__ = "jwt_tokens"
 
-	id               : Mapped[int] = mapped_column(primary_key=True)
+	id               : Mapped[str] = mapped_column(primary_key=True)
 	token            : Mapped[str] = mapped_column(Text, nullable=False)
 	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-	created          : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
-	type             : Mapped[JWT_Type] = mapped_column(SqlEnum(JWT_Type, native_enum=False))
-	last_used        : Mapped[datetime] = mapped_column(DateTime, nullable=False)
+	created          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+	last_used        : Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 	device_name      : Mapped[str] = mapped_column(String(100), nullable=False)
 	on_creation_ip   : Mapped[str] = mapped_column(String(45), nullable=False)
-	expires_at       : Mapped[datetime] = mapped_column(DateTime, nullable=False)
+	expires_at       : Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 	is_revoked       : Mapped[bool] = mapped_column(Boolean, default=False)
 
 	user: Mapped[User] = relationship(back_populates="tokens")
@@ -64,8 +63,8 @@ class Topic(Base):
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	name               : Mapped[str] = mapped_column(String(200), nullable=False)
 	name_hash          : Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-	created_at         : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
-	edited_at          : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	image_url          : Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
@@ -157,7 +156,7 @@ class Audit(Base):
 	id               : Mapped[int] = mapped_column(primary_key=True)
 	action_type      : Mapped[ActionType] = mapped_column(SqlEnum(ActionType, native_enum=False), nullable=False)
 	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-	timestamp        : Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+	timestamp        : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 	reason           : Mapped[str] = mapped_column(Text, nullable=True)
 
 	user: Mapped[User] = relationship(back_populates="audit_log")
