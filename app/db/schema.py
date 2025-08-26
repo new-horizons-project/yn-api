@@ -34,7 +34,7 @@ class User(Base):
 class JWT_Token(Base):
 	__tablename__ = "jwt_tokens"
 
-	id               : Mapped[str] = mapped_column(primary_key=True, unique=True)
+	id               : Mapped[str] = mapped_column(primary_key=True)
 	token            : Mapped[str] = mapped_column(Text, nullable=False)
 	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 	created          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))

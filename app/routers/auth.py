@@ -53,11 +53,11 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 		)
 
 	access_token = create_access_token(sub=str(user.id))
-	refresh_token = create_refresh_token(sub=str(user.id))
+	refresh_token, jti = create_refresh_token(sub=str(user.id))
 
 	db_refresh_token = schema.JWT_Token(
-		id=refresh_token[1],
-		token=refresh_token[0],
+		id=jti,
+		token=refresh_token,
 		user_id=user.id,
 		created=datetime.now(timezone.utc),
 		on_creation_ip=request.client.host,
@@ -76,7 +76,7 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 
 	return Token(
 		access_token=access_token,
-		refresh_token=refresh_token[0],
+		refresh_token=refresh_token,
 		token_type="bearer",
 	)
 
