@@ -2,7 +2,7 @@ from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.enums import UserRoles
+from ..db.enums import UserRoles, JWT_Type
 from ..db import get_session
 from ..db.users import get_user_by_id
 from .security import decode_token
@@ -16,7 +16,7 @@ def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 		payload = decode_token(token)
 		user_id = payload.get("sub")
 
-		if payload.get("type") == "refresh":
+		if payload.get("type") == JWT_Type.refresh.value:
 			raise HTTPException(status_code=401, detail="Invalid token type")
 
 		if not user_id:
