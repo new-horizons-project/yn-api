@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
+import uuid
 
 from sqlalchemy import (
 	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime, Integer
@@ -8,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
 	Mapped, mapped_column, relationship, DeclarativeBase
 )
+from sqlalchemy.dialects.postgresql import UUID
 
 from .enums import *
 
@@ -34,7 +36,7 @@ class User(Base):
 class JWT_Token(Base):
 	__tablename__ = "jwt_tokens"
 
-	id               : Mapped[str] = mapped_column(primary_key=True)
+	id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 	token            : Mapped[str] = mapped_column(Text, nullable=False)
 	user_id          : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 	created          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
