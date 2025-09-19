@@ -18,7 +18,8 @@ class Config(BaseSettings):
 	PASSWORD_MIN_LENGTH: int = 8
 
 	# Database
-	DATABASE_URL: str
+	DATABASE_HOST: str
+	DATABASE_PORT: int
 	DATABASE_USERNAME: str
 	DATABASE_PASSWORD: str
 	DATABASE_DBNAME: str

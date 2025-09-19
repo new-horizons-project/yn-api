@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+from urllib.parse import quote_plus
 import logging
 
 import asyncpg
@@ -8,9 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from .schema import Base
 from ..config import settings
 
+user = quote_plus(settings.DATABASE_USERNAME)
+password = quote_plus(settings.DATABASE_PASSWORD)
+host = f"{settings.DATABASE_HOST}:{settings.DATABASE_PORT}"
+dbname = quote_plus(settings.DATABASE_DBNAME)
+
 engine = create_async_engine(
-	f"postgresql+asyncpg://{settings.DATABASE_USERNAME}:{settings.DATABASE_PASSWORD}@"
-	f"{settings.DATABASE_URL}/{settings.DATABASE_DBNAME}"
+	f"postgresql+asyncpg://{user}:{password}@{host}/{dbname}"
 )
 
 session_local = sessionmaker(
