@@ -7,12 +7,21 @@ class Config(BaseSettings):
 		extra="ignore",
 	)
 
+	# JWT
 	SECRET_KEY: str
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 10
 	REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-	DATABASE_URL: str
+	
+	# Password policy
 	PASSWORD_STRENGTH_POLICY: int = 2
 	PASSWORD_MIN_LENGTH: int = 8
+
+	# Database
+	DATABASE_HOST: str
+	DATABASE_PORT: int
+	DATABASE_USERNAME: str
+	DATABASE_PASSWORD: str
+	DATABASE_DBNAME: str
 
 settings = Config()
