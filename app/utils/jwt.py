@@ -14,7 +14,11 @@ def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 				      db: AsyncSession = Depends(get_session)):
 		token = credentials.credentials
 		payload = decode_token(token)
-		user_id = payload.get("sub")
+
+		try:
+			user_id = int(payload.get("sub"))
+		except (TypeError, ValueError):
+			raise HTTPException(status_code=401, detail="Invalid token payload")
 
 		if payload.get("type") == JWT_Type.refresh.value:
 			raise HTTPException(status_code=401, detail="Invalid token type")

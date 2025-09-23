@@ -1,4 +1,5 @@
 from datetime import datetime
+import uuid
 
 from pydantic import BaseModel
 
@@ -36,7 +37,7 @@ class UserCreateRequest(BaseModel):
 
 
 class JWTUserMinimal(BaseModel):
-	id: str
+	id: uuid.UUID
 	created: datetime
 	last_used: datetime
 	device_name: str
