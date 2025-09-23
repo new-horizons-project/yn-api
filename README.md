@@ -83,5 +83,5 @@ Special thanks to the authors and maintainers of these libraries for their contr
 | Role                    | Contributor |
 |-------------------------|-------------|
 | Lead Backend Developer  | [@at-elcapitan](https://github.com/at-elcapitan) |
-| Backend Developer       | [phantom](https://github.com/phantom42-web) |
+| Backend Developer       | [@phantom42-web](https://github.com/phantom42-web) |
 
