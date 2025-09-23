@@ -60,3 +60,28 @@ docker-compose logs -f
 ```
 
 * The API is available at port `9002` by default
+
+## Credits
+
+This project uses following open-source libraries:
+
+| Package               | License                    |
+|-----------------------|----------------------------|
+| **FastAPI**           | MIT                        |
+| **SQLAlchemy**        | MIT                        |
+| **asyncpg**           | Apache 2.0                 |
+| **PyJWT**             | MIT                        |
+| **passlib**           | BSD                        |
+| **Pydantic**          | MIT                        |
+| **pydantic-settings** | MIT                        |
+| **Colorama**          | BSD                        |
+
+Special thanks to the authors and maintainers of these libraries for their contributions to the open-source community.
+
+### Development Team
+
+| Role                    | Contributor |
+|-------------------------|-------------|
+| Lead Backend Developer  | [@at-elcapitan](https://github.com/at-elcapitan) |
+| Backend Developer       | [phantom](https://github.com/phantom42-web) |
+
