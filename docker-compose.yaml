@@ -1,0 +1,27 @@
+services:
+  newhorizons_api:
+    build: .
+    container_name: new_horizons_api
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "9002:9002"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: new_horizons_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: newhorizons
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
