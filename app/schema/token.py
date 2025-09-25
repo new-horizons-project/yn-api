@@ -1,4 +1,5 @@
 from datetime import datetime
+import uuid
 
 from pydantic import BaseModel
 
@@ -16,7 +17,7 @@ class RefreshToken(BaseModel):
 	token_type:    str
 
 class JWTUserToken(BaseModel):
-	id             : str
+	id             : uuid.UUID
 	user_id        : int
 	device_name    : str
 	on_creation_ip : str
