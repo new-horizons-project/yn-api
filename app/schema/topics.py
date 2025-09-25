@@ -27,6 +27,7 @@ class Translation(BaseModel):
 class TopicTranslationBase(BaseModel):
 	id: int
 	translation_code: str
+	full_name: str
 	topic_id: int
 	parse_mode: ParseMode
 	text: str

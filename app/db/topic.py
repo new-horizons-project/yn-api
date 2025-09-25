@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists, insert
 
 from . import schema
-from ..schema.topics import TopicCreateRequst
+from ..schema.topics import TopicCreateRequst, TopicTranslationBase
 from ..utils.security import hash_topic_name
 
 async def get_topic_list(db: AsyncSession) -> list[schema.Topic]:
@@ -15,12 +15,27 @@ async def get_translations_list(db: AsyncSession) -> list[schema.Translation]:
 	)
 	return res.all()
 
-async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[schema.TopicTranslation]:
-	res = await db.execute(
-		select(schema.TopicTranslation)
-		.where(schema.TopicTranslation.topic_id == topic_id)
-	)
-	return res.scalars().all()
+async def get_topic_translations_list(topic_id: int, db: AsyncSession
+									  ) -> list[TopicTranslationBase]:
+    res = await db.execute(
+        select(
+            schema.TopicTranslation.id,
+            schema.TopicTranslation.topic_id,
+            schema.TopicTranslation.parse_mode,
+            schema.TopicTranslation.text,
+            schema.Translation.translation_code,
+            schema.Translation.full_name,
+        )
+        .join(
+            schema.Translation,
+            schema.Translation.id == schema.TopicTranslation.translation_id,
+        )
+        .where(schema.TopicTranslation.topic_id == topic_id)
+    )
+
+    rows = res.all()
+    return [TopicTranslationBase.model_validate(dict(r._mapping)) for r in rows]
+
 
 async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> schema.TopicTranslation | None:
 	res = await db.execute(
