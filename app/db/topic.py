@@ -9,6 +9,12 @@ async def get_topic_list(db: AsyncSession) -> list[schema.Topic]:
 	res = await db.execute(select(schema.Topic))
 	return res.scalars().all()
 
+async def get_translations_list(db: AsyncSession) -> list[schema.Translation]:
+	res = await db.scalars(
+		select(schema.Translation)
+	)
+	return res.all()
+
 async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[schema.TopicTranslation]:
 	res = await db.execute(
 		select(schema.TopicTranslation)
@@ -39,7 +45,7 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> int:
 	db.add(new_topic)
 	await db.flush()
 	new_translation = schema.TopicTranslation(
-		translation_code=topic.translation_id,
+		translation_id=topic.translation_id,
 		topic_id=new_topic.id,
 		parse_mode=topic.parse_mode,
 		text=topic.text,

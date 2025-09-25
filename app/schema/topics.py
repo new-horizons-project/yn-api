@@ -15,7 +15,15 @@ class TopicBase(BaseModel):
 
     class Config:
         from_attributes = True
-        
+
+class Translation(BaseModel):
+	id: int
+	translation_code: str
+	full_name: str
+
+	class Config:
+		from_attributes = True
+
 class TopicTranslationBase(BaseModel):
 	id: int
 	translation_code: str
@@ -44,3 +52,7 @@ class TranslationCreateRequst(BaseModel):
 	image_url:       Optional[str]
 	parse_mode:      ParseMode
 	text:            str
+
+class PaginatedTopics(BaseModel):
+	total:  int
+	topics: list[TopicBase]
