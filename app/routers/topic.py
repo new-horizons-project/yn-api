@@ -99,7 +99,15 @@ async def change_name(topic_id: int,
 async def add_translation(topic_id: int, 
 						  translation: topics.TranslationCreateRequst, 
 						  user_id: int = Depends(jwt_extract_user_id),
-						  db: AsyncSession = Depends(get_session)) -> topics.TopicTranslationBase:
+						  db: AsyncSession = Depends(get_session)) -> topics.TopicTranslationCreated:
+	topic = await topic_db.get_topic(topic_id, db)
+	if not topic:
+		raise HTTPException(404, "Topic not found")
+	
+	translation_code = await topic_db.get_translation_code_by_id(translation.translation_code_id, db)
+	if not translation_code:
+		raise HTTPException(404, "Translation code not found")
+
 	new_translation = schema.TopicTranslation(
 		translation_id    = translation.translation_code_id,
 		creator_user_id   = user_id,
@@ -142,12 +150,25 @@ async def edit_translation(topic_id: int,
 async def del_translation(topic_id: int, 
 						  translation_id: int, 
 						  db: AsyncSession = Depends(get_session)) -> None:
-	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
+	translation = await topic_db.get_topic_translation_alone(topic_id, translation_id, db)
 	if not translation:
 		raise HTTPException(status_code=404, detail="Translation not found")
 
 	await db.delete(translation)
 	await db.commit()
+
+	return {"detail": "Translation deleted successfully"}
+
+
+@router.delete("/{topic_id}")
+async def delete_topic(topic_id: int, db: AsyncSession = Depends(get_session)) -> None:
+	topic = await topic_db.get_topic(topic_id, db)
+	if not topic:
+		raise HTTPException(status_code=404, detail="Topic not found")
+	
+	await db.delete(topic)
+	await db.commit()
+	return {"detail": "Topic deleted successfully"}
 
 
 @router_public.get("/{topic_id}", response_model=topics.TopicBase)
