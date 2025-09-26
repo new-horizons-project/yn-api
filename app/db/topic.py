@@ -35,8 +35,8 @@ async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[t
 
 	rows = result.all()
 	return [topics.TopicTranslationBase.model_validate(dict(row._mapping)) for row in rows]
-async def get_topic_translations_list(topic_id: int, db: AsyncSession
-									  ) -> list[TopicTranslationBase]:
+
+async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[TopicTranslationBase]:
     res = await db.execute(
         select(
             schema.TopicTranslation.id,
@@ -55,7 +55,6 @@ async def get_topic_translations_list(topic_id: int, db: AsyncSession
 
     rows = res.all()
     return [TopicTranslationBase.model_validate(dict(r._mapping)) for r in rows]
-
 
 async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> topics.TopicTranslationBase | None:
 	result = await db.execute(
