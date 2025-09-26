@@ -35,6 +35,15 @@ class TopicTranslationBase(BaseModel):
 	class Config:
 		from_attributes = True
 
+class TopicTranslationCreated(BaseModel):
+	id:               int
+	topic_id:         int
+	parse_mode:       ParseMode
+	text:             str
+
+	class Config:
+		from_attributes = True
+
 class TopicCreateRequst(BaseModel):
 	name:            str
 	translation_id:  int
@@ -46,7 +55,6 @@ class ChangeNameRequst(BaseModel):
 	name: str
 
 class TranslationCreateRequst(BaseModel):
-	topic_id:        int
 	translation_code_id: int
 	image_url:       Optional[str]
 	parse_mode:      ParseMode

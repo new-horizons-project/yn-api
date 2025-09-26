@@ -4,9 +4,8 @@ from datetime import datetime
 import fastapi
 from fastapi import FastAPI, APIRouter
 from contextlib import asynccontextmanager
-from colorama import init, Fore, Style
+from colorama import Fore, Style
 
-from .config import settings
 from .routers import *
 from .db import init_db, get_session, users, topic
 from . import __version__
@@ -53,3 +52,4 @@ app.include_router(topic_router)
 app.include_router(topic_router_public)
 app.include_router(tag_router)
 app.include_router(tag_router_public)
+app.include_router(translation_codes_router)
