@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 	session_generator = get_session()
 	session = await anext(session_generator)
-	
+
 	try:
 		await users.create_root_user(session)
 		await topic.create_base_translation(session)
@@ -49,4 +49,7 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(admin_router)
 app.include_router(user_router_public)
-# app.include_router(topic_router)
+app.include_router(topic_router)
+app.include_router(topic_router_public)
+app.include_router(tag_router)
+app.include_router(tag_router_public)

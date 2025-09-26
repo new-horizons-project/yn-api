@@ -28,9 +28,10 @@ class User(Base):
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
 
-	topic        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
-	tokens       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
-	audit_log    : Mapped[list[Audit]] = relationship(back_populates="user")
+	topic                : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
+	tokens               : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
+	topic_translations   : Mapped[TopicTranslation] = relationship(back_populates="user")
+	audit_log            : Mapped[list[Audit]] = relationship(back_populates="user")
 
 
 class JWT_Token(Base):
@@ -92,10 +93,12 @@ class TopicTranslation(Base):
 	id               : Mapped[int] = mapped_column(primary_key=True)
 	translation_id   : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
 	topic_id         : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), nullable=False)
+	creator_user_id  : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	parse_mode       : Mapped[ParseMode] = mapped_column(SqlEnum(ParseMode, native_enum=False), nullable=False)
 	text             : Mapped[str] = mapped_column(Text, nullable=False)
 
 	translation: Mapped[Translation] = relationship(back_populates="topic_translations")
+	user: Mapped[User] = relationship(back_populates="topic_translations")
 	topic: Mapped[Topic] = relationship(back_populates="translations")
 
 
