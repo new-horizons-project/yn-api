@@ -25,12 +25,21 @@ class Translation(BaseModel):
 		from_attributes = True
 
 class TopicTranslationBase(BaseModel):
+<<<<<<< HEAD
 	id: int
 	translation_code: str
 	full_name: str
 	topic_id: int
 	parse_mode: ParseMode
 	text: str
+=======
+	id:               int
+	translation_code: str 
+	topic_id:         int
+	parse_mode:       ParseMode
+	text:             str
+	full_name:        str
+>>>>>>> 145a024 (fix topic endpoint & and merge root with search)
 
 	class Config:
 		from_attributes = True

@@ -4,6 +4,7 @@ from sqlalchemy import select, exists, insert
 from . import schema
 from ..schema.topics import TopicCreateRequst, TopicTranslationBase
 from ..utils.security import hash_topic_name
+from ..schema import topics
 
 async def get_topic_list(db: AsyncSession) -> list[schema.Topic]:
 	res = await db.execute(select(schema.Topic))
@@ -15,6 +16,25 @@ async def get_translations_list(db: AsyncSession) -> list[schema.Translation]:
 	)
 	return res.all()
 
+async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[topics.TopicTranslationBase]:
+	result = await db.execute(
+		select(
+			schema.TopicTranslation.id,
+			schema.TopicTranslation.topic_id,
+			schema.TopicTranslation.parse_mode,
+			schema.TopicTranslation.text,
+			schema.Translation.translation_code,
+			schema.Translation.full_name,
+		)
+		.join(
+			schema.Translation,
+			schema.Translation.id == schema.TopicTranslation.translation_id,
+		)
+		.where(schema.TopicTranslation.topic_id == topic_id)
+	)
+
+	rows = result.all()
+	return [topics.TopicTranslationBase.model_validate(dict(row._mapping)) for row in rows]
 async def get_topic_translations_list(topic_id: int, db: AsyncSession
 									  ) -> list[TopicTranslationBase]:
     res = await db.execute(
@@ -37,15 +57,29 @@ async def get_topic_translations_list(topic_id: int, db: AsyncSession
     return [TopicTranslationBase.model_validate(dict(r._mapping)) for r in rows]
 
 
-async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> schema.TopicTranslation | None:
-	res = await db.execute(
-		select(schema.TopicTranslation)
+async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> topics.TopicTranslationBase | None:
+	result = await db.execute(
+		select(
+			schema.TopicTranslation.id,
+			schema.TopicTranslation.topic_id,
+			schema.TopicTranslation.parse_mode,
+			schema.TopicTranslation.text,
+			schema.Translation.translation_code,
+			schema.Translation.full_name,
+		)
+		.join(
+			schema.Translation,
+			schema.Translation.id == schema.TopicTranslation.translation_id,
+		)
 		.where(
 			schema.TopicTranslation.topic_id == topic_id, 
 			schema.TopicTranslation.id == translation_id
 		)
 	)
-	return res.scalars().first()
+	row = result.first()
+	if row:
+		return topics.TopicTranslationBase.model_validate(dict(row._mapping))
+	return None
 
 async def get_topic(topic_id: int, db: AsyncSession) -> schema.Topic | None:
 	return await db.get(schema.Topic, topic_id)
@@ -73,8 +107,8 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst) -> int:
 
 async def create_base_translation(db: AsyncSession) -> None:
 	if await db.scalar(
-        select(exists().select_from(schema.Translation))
-    ): return
+		select(exists().select_from(schema.Translation))
+	): return
 
 	await db.execute(
 		insert(schema.Translation).values(
