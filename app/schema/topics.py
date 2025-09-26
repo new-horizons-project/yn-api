@@ -37,7 +37,6 @@ class TopicTranslationBase(BaseModel):
 
 class TopicCreateRequst(BaseModel):
 	name:            str
-	creator_user_id: int
 	translation_id:  int
 	image_url:       Optional[str]
 	parse_mode:      ParseMode
@@ -48,8 +47,12 @@ class ChangeNameRequst(BaseModel):
 
 class TranslationCreateRequst(BaseModel):
 	topic_id:        int
-	creator_user_id: int
 	translation_code_id: int
+	image_url:       Optional[str]
+	parse_mode:      ParseMode
+	text:            str
+
+class TranslationEditRequest(BaseModel):
 	image_url:       Optional[str]
 	parse_mode:      ParseMode
 	text:            str
