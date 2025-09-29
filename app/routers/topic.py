@@ -137,9 +137,7 @@ async def edit_translation(topic_id: int,
 	translation_req.parse_mode   = translation.parse_mode
 	translation_req.text         = translation.text
 	
-	db.add(translation_req)
 	await db.commit()
-	await db.refresh(translation_req)
 	return {
 		"detail": "Translation edited successfully",
 		"translation": translation_req
@@ -217,8 +215,8 @@ async def attach_tag_to_topic(
 
 	if succes:
 		return {"detail": "Tag attached to topic"}
-	else:
-		return {"detail": "Tag already attached"}
+	
+	return {"detail": "Tag already attached"}
 
 
 @router_public.delete("/{topic_id}/tags/{tag_id}")
@@ -228,8 +226,12 @@ async def detach_tag_from_topic(
 	db: AsyncSession = Depends(get_session),
 	_=Depends(jwt_auth_check_permission([UserRoles.moderator, UserRoles.admin])),
 ):
-	succes = await tag_db.detach_tag_from_topic(db, topic_id, tag_id)
+	try:
+		succes = await tag_db.detach_tag_from_topic(db, topic_id, tag_id)
+	except tag_db.TagNotExistsException:
+		return {"detail": "Tag not found"}
+
 	if succes:
 		return {"detail": "Tag detached from topic"}
-	else:
-		return {"detail": "Tag not attached"}
+	
+	return {"detail": "Tag not attached"}

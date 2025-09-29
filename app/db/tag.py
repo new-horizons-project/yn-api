@@ -83,10 +83,16 @@ async def attach_tag_to_topic(db: AsyncSession, topic_id: int, tag_id: int) -> b
 
 
 async def detach_tag_from_topic(db: AsyncSession, topic_id: int, tag_id: int) -> bool:
-    result = await db.execute(
+	tag = await db.get(schema.Tag, tag_id)
+	
+	if tag is None: 
+		raise TagNotExistsException(tag_id)
+	
+	result = await db.execute(
         delete(schema.TagInTopic)
         .where(schema.TagInTopic.topic_id == topic_id, schema.TagInTopic.tag_id == tag_id)
         .returning(schema.TagInTopic.tag_id)
     )
-    await db.commit()
-    return result.scalar() is not None
+
+	await db.commit()
+	return result.scalar() is not None

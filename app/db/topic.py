@@ -36,25 +36,6 @@ async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[t
 	rows = result.all()
 	return [topics.TopicTranslationBase.model_validate(dict(row._mapping)) for row in rows]
 
-async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[TopicTranslationBase]:
-    res = await db.execute(
-        select(
-            schema.TopicTranslation.id,
-            schema.TopicTranslation.topic_id,
-            schema.TopicTranslation.parse_mode,
-            schema.TopicTranslation.text,
-            schema.Translation.translation_code,
-            schema.Translation.full_name,
-        )
-        .join(
-            schema.Translation,
-            schema.Translation.id == schema.TopicTranslation.translation_id,
-        )
-        .where(schema.TopicTranslation.topic_id == topic_id)
-    )
-
-    rows = res.all()
-    return [TopicTranslationBase.model_validate(dict(r._mapping)) for r in rows]
 
 async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> topics.TopicTranslationBase | None:
 	result = await db.execute(
@@ -81,18 +62,15 @@ async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSe
 	return None
 
 async def get_topic_translation_alone(topic_id: int, translation_id: int, db: AsyncSession) -> schema.TopicTranslation | None:
-	result = await db.execute(
-		select(
-			schema.TopicTranslation
-		)
+	result = await db.scalar(
+		select(schema.TopicTranslation)
 		.where(
 			schema.TopicTranslation.topic_id == topic_id, 
 			schema.TopicTranslation.id == translation_id
 		)
 	)
-	row = result.scalars().first()
-
-	return row
+	
+	return result
 
 async def get_topic(topic_id: int, db: AsyncSession) -> schema.Topic | None:
 	return await db.get(schema.Topic, topic_id)

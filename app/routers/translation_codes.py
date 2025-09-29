@@ -1,12 +1,9 @@
-from fastapi    import Depends, APIRouter, HTTPException, Body, Query
-from sqlalchemy	import select, exists, func
+from fastapi import Depends, APIRouter, HTTPException
+from sqlalchemy	import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing   import Annotated
-from datetime import datetime, timezone
 
 from ..utils.jwt import jwt_auth_check_permission
-from ..utils.security import hash_topic_name
-from ..db       import get_session, schema, translation_code as tc_db
+from ..db import get_session, schema, translation_code as tc_db
 from ..db.enums import UserRoles
 from ..schema import translation_code as tc
 
