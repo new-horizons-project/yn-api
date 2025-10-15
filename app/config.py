@@ -7,6 +7,9 @@ class Config(BaseSettings):
 		extra="ignore",
 	)
 
+	# General
+	APP_NAME: str = "New Horizons Project"
+
 	# JWT
 	SECRET_KEY: str
 	ALGORITHM: str = "HS256"
@@ -16,6 +19,9 @@ class Config(BaseSettings):
 	# Password policy
 	PASSWORD_STRENGTH_POLICY: int = 2
 	PASSWORD_MIN_LENGTH: int = 8
+
+	# Media
+	STATIC_MEDIA_FOLDER: str
 
 	# Database
 	DATABASE_HOST: str

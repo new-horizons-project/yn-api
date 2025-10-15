@@ -177,3 +177,10 @@ class AuditEffectedObject(Base):
 	object_id        : Mapped[int] = mapped_column(Integer, nullable=False)
 
 	audit: Mapped[Audit] = relationship(back_populates="effected_object")
+
+
+class MediaObject(Base):
+	__tablename__ = "media_object"
+
+	id: Mapped[int] = mapped_column(primary_key=True)
+	

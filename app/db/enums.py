@@ -36,3 +36,9 @@ class ObjectType(str, Enum):
 class JWT_Type(str, Enum):
 	access  = "access"
 	refresh = "refresh"
+
+
+class MediaType(str, Enum):
+	user_avatar = "user_avatar"
+	system = "system"
+	topic = "topic"
