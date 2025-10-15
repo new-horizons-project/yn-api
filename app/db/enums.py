@@ -39,6 +39,14 @@ class JWT_Type(str, Enum):
 
 
 class MediaType(str, Enum):
-	user_avatar = "user_avatar"
-	system = "system"
-	topic = "topic"
+	user_avatar    = "user_avatar"
+	system         = "system"
+	topic          = "topic"
+
+
+class MediaSize(str, Enum):
+	original   = "original"
+	large      = "large"
+	medium     = "medium"
+	small      = "small"
+	thumbnail  = "thumbnail"

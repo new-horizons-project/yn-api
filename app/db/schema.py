@@ -32,6 +32,8 @@ class User(Base):
 	tokens               : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
 	topic_translations   : Mapped[TopicTranslation] = relationship(back_populates="user")
 	audit_log            : Mapped[list[Audit]] = relationship(back_populates="user")
+	media_owner          : Mapped[list[MediaObject]] = relationship(back_populates="user_uploader", foreign_keys="[MediaObject.uploaded_by_user_id]")
+	media_uploader       : Mapped[list[MediaObject]] = relationship(back_populates="user_owner", foreign_keys="[MediaObject.used_user_id]")
 
 
 class JWT_Token(Base):
@@ -69,7 +71,7 @@ class Topic(Base):
 	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-	image_url          : Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 
 	creator: Mapped[User] = relationship(back_populates="topic")
 	translations: Mapped[list[TopicTranslation]] = relationship(back_populates="topic", cascade="all, delete-orphan")
@@ -84,7 +86,8 @@ class Topic(Base):
 		back_populates="topic"
 	)
 
-	links: Mapped[list[TopicLink]] = relationship(back_populates="topic", cascade="all, delete-orphan")
+	media_object   : Mapped[list[MediaObject]] = relationship(back_populates="topic", foreign_keys="[MediaObject.used_topic_id]")
+	links          : Mapped[list[TopicLink]]   = relationship(back_populates="topic", cascade="all, delete-orphan")
 
 
 class TopicTranslation(Base):
@@ -182,5 +185,26 @@ class AuditEffectedObject(Base):
 class MediaObject(Base):
 	__tablename__ = "media_object"
 
-	id: Mapped[int] = mapped_column(primary_key=True)
-	
+	id                     : Mapped[int] = mapped_column(primary_key=True)
+	obj_type               : Mapped[MediaType] = mapped_column(SqlEnum(MediaType, native_enum=False), nullable=False)
+	file_path              : Mapped[str] = mapped_column(String(500), nullable=False)
+	uploaded_at            : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
+	sha256_hash_original   : Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+	sha256_hash_thumb      : Mapped[Optional[str]] = mapped_column(String(64), nullable=False, unique=True)
+	sha256_hash_small      : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
+	sha256_hash_medium     : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
+	sha256_hash_large      : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
+	has_small              : Mapped[bool] = mapped_column(Boolean, default=False)
+	has_medium             : Mapped[bool] = mapped_column(Boolean, default=False)
+	has_large              : Mapped[bool] = mapped_column(Boolean, default=False)
+
+	uploaded_by_user_id    : Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=False)
+	used_topic_id          : Mapped[Optional[int]] = mapped_column(ForeignKey("topic.id", ondelete="SET NULL"), nullable=True)
+	used_user_id           : Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+	user_owner       : Mapped[Optional[User]] = relationship(back_populates="media_uploader", foreign_keys=[used_user_id])
+	user_uploader    : Mapped[User] = relationship(back_populates="media_owner", foreign_keys=[uploaded_by_user_id])
+	topic            : Mapped[Optional[Topic]] = relationship(
+		back_populates  = "media_object",
+		foreign_keys    = [used_topic_id]
+	)
