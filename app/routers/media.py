@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..utils.jwt import jwt_auth_check_permission
+from ..utils.media import verify_image_by_path
 from ..db       import get_session, media as media_db
 from ..db.enums import MediaSize, UserRoles, MediaType
 from ..schema.media   import MediaInformation, RelatedObjects
@@ -18,28 +19,26 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")
 	
-	match size:
-		case MediaSize.original:
-			filename = obj.file_path
-		case MediaSize.thumbnail:
-			filename = f"thumbnail_{obj.file_path}"
-		case MediaSize.small:
-			if not obj.has_small:
-				raise HTTPException(status_code=404, detail="Media size not found")
-			
-			filename = f"small_{obj.file_path}"
-		case MediaSize.medium:
-			if not obj.has_medium:
-				raise HTTPException(status_code=404, detail="Media size not found")
-			
-			filename = f"medium_{obj.file_path}"
-		case MediaSize.large:
-			if not obj.has_large:
-				raise HTTPException(status_code=404, detail="Media size not found")
-			
-			filename = f"large_{obj.file_path}"
+	size_map = {
+		MediaSize.original: ("", obj.sha256_hash_original, True),
+		MediaSize.thumbnail: ("thumbnail_", obj.sha256_hash_thumb, True),
+		MediaSize.small: ("small_", obj.sha256_hash_small, obj.has_small),
+		MediaSize.medium: ("medium_", obj.sha256_hash_medium, obj.has_medium),
+		MediaSize.large: ("large_", obj.sha256_hash_large, obj.has_large),
+	}
+
+	prefix, sha256_hash, available = size_map[size]
+	
+	if not available:
+		raise HTTPException(status_code=404, detail="Media size not found")
+	
+	filename = f"{prefix}{obj.file_path}"
+
+	if not verify_image_by_path(filename, sha256_hash):
+		raise HTTPException(status_code=404, detail="Media not found (verification failed)")
 	
 	return Response(content=open(f"{config.settings.STATIC_MEDIA_FOLDER}/{filename}", "rb").read(), media_type="image/png")
+
 
 @router.get("/{media_id}/information", dependencies=[Depends(jwt_auth_check_permission([UserRoles.admin]))],
 			response_model=MediaInformation)
