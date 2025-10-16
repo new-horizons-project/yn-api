@@ -190,7 +190,7 @@ class MediaObject(Base):
 	file_path              : Mapped[str] = mapped_column(String(500), nullable=False)
 	uploaded_at            : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 	sha256_hash_original   : Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
-	sha256_hash_thumb      : Mapped[Optional[str]] = mapped_column(String(64), nullable=False, unique=True)
+	sha256_hash_thumb      : Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 	sha256_hash_small      : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
 	sha256_hash_medium     : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
 	sha256_hash_large      : Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
@@ -198,7 +198,7 @@ class MediaObject(Base):
 	has_medium             : Mapped[bool] = mapped_column(Boolean, default=False)
 	has_large              : Mapped[bool] = mapped_column(Boolean, default=False)
 
-	uploaded_by_user_id    : Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=False)
+	uploaded_by_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=False)
 	used_topic_id          : Mapped[Optional[int]] = mapped_column(ForeignKey("topic.id", ondelete="SET NULL"), nullable=True)
 	used_user_id           : Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
