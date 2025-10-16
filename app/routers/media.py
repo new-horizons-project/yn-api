@@ -32,12 +32,15 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 	if not available:
 		raise HTTPException(status_code=404, detail="Media size not found")
 	
-	filename = f"{prefix}{obj.file_path}"
+	filepath = f"{config.settings.STATIC_MEDIA_FOLDER}/{prefix}{obj.file_path}"
 
-	if not verify_image_by_path(filename, sha256_hash):
-		raise HTTPException(status_code=404, detail="Media not found (verification failed)")
+	try:
+		if not verify_image_by_path(filepath, sha256_hash):
+			raise HTTPException(status_code=404, detail="Media not found (verification failed)")
+	except FileNotFoundError:
+		raise HTTPException(status_code=404, detail="Media not found (file missing)")
 	
-	return Response(content=open(f"{config.settings.STATIC_MEDIA_FOLDER}/{filename}", "rb").read(), media_type="image/png")
+	return Response(content=open(filepath, "rb").read(), media_type="image/png")
 
 
 @router.get("/{media_id}/information", dependencies=[Depends(jwt_auth_check_permission([UserRoles.admin]))],

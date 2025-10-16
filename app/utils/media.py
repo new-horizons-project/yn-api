@@ -23,7 +23,10 @@ def resize_image(image_data: bytes, size: MediaSize) -> bytes:
 
 
 def verify_image_by_path(file_path: str, sha256_hash: str) -> bool:
-	with open(file_path, "rb") as f:
-		file_data = f.read()
-		calculated_hash = hashlib.sha256(file_data).hexdigest()
-		return calculated_hash == sha256_hash
+	try:
+		with open(file_path, "rb") as f:
+			file_data = f.read()
+			calculated_hash = hashlib.sha256(file_data).hexdigest()
+			return calculated_hash == sha256_hash
+	except FileNotFoundError as e:
+		raise e
