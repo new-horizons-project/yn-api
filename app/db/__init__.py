@@ -14,6 +14,8 @@ password = quote_plus(settings.DATABASE_PASSWORD)
 host = f"{settings.DATABASE_HOST}:{settings.DATABASE_PORT}"
 dbname = quote_plus(settings.DATABASE_DBNAME)
 
+ALEMBIC_DATABASE_URL=f"postgresql+psycopg2://{user}:{password}@{host}/{dbname}"
+
 engine = create_async_engine(
 	f"postgresql+asyncpg://{user}:{password}@{host}/{dbname}"
 )

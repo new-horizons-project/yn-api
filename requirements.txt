@@ -7,3 +7,5 @@ pydantic-settings
 pydantic
 asyncpg
 colorama
+alembic
+psycopg2
