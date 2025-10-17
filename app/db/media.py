@@ -15,7 +15,7 @@ from ..db.enums import MediaType, MediaSize
 
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
-				    generate_types: list[MediaSize] = None, trim: bool = True) -> schema.MediaObject:
+				    generate_types: list[MediaSize] | None = None, trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + file.filename
 
 	original_file = BytesIO()
