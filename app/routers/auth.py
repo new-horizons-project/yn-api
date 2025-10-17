@@ -76,7 +76,7 @@ async def login(request: Request, response: Response, form: OAuth2PasswordReques
 		value=refresh_token,
 		httponly=True,
 		secure=True,
-		samesite="none",
+		samesite="lax" if not config.settings.DEV else "none",
 		max_age=config.settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
 	)
 
