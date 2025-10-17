@@ -58,7 +58,6 @@ app = FastAPI(title=config.settings.APP_NAME, version=__version__, lifespan=life
 def ping(request: Request):
     since_started = datetime.now() - started_at
     user_agent = parse(request.headers.get("user-agent", "unknown"))
-    device_type = ""
 
     if user_agent.is_mobile:
         device_type = "mobile"

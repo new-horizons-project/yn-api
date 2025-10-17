@@ -4,7 +4,7 @@ import hashlib
 from io import BytesIO
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import selectinload
 from fastapi import UploadFile
 
@@ -15,7 +15,7 @@ from ..db.enums import MediaType, MediaSize
 
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
-				    generate_types: list[MediaSize] = [MediaSize.thumbnail], trim: bool = True) -> schema.MediaObject:
+				    generate_types: list[MediaSize] = [], trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + file.filename
 
 	original_file = BytesIO()
@@ -67,41 +67,43 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 
 
 async def init_media(db: AsyncSession):
-	result = await db.execute(select(schema.MediaObject))
-	if result.first():
+	if (await db.execute(select(schema.MediaObject))).scalar_one_or_none() is not None:
 		return
+	
+	logo_data: bytes = 0
 
 	with open("./media/logo.png", "rb") as f:
 		logo_data = f.read()
-		await add_media(
-			db,
-			topic_id = None,
-			user = schema.User(id=1),
-			file = UploadFile(
-				filename="logo.png",
-				file=BytesIO(logo_data)),
-			content_type = MediaType.system,
-			generate_types=[
-				MediaSize.small,
-				MediaSize.medium,
-				MediaSize.large
-			],
-			trim=True
-		)
+		
+	await add_media(
+		db,
+		topic_id = None,
+		user = schema.User(id=1),
+		file = UploadFile(
+			filename="logo.png",
+			file=BytesIO(logo_data)),
+		content_type = MediaType.system,
+		generate_types=[
+			MediaSize.small,
+			MediaSize.medium,
+			MediaSize.large
+		],
+		trim=True
+	)
 
 
-async def get_media_by_id(media_id: int, db: AsyncSession, preload_all: bool = False) -> schema.MediaObject | None:
-	if preload_all:
-		result = await db.scalar(
-			select(schema.MediaObject)
-			.where(schema.MediaObject.id == media_id)
-			.options(
-				selectinload(schema.MediaObject.user_uploader),
-				selectinload(schema.MediaObject.user_owner),
-				selectinload(schema.MediaObject.topic)
-			)
-		)
-	else:
+async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = False) -> schema.MediaObject | None:
+	if not preload_all:
 		result = await db.get(schema.MediaObject, media_id)
+
+	result = await db.scalar(
+		select(schema.MediaObject)
+		.where(schema.MediaObject.id == media_id)
+		.options(
+			selectinload(schema.MediaObject.user_uploader),
+			selectinload(schema.MediaObject.user_owner),
+			selectinload(schema.MediaObject.topic)
+		)
+	)
 
 	return result
