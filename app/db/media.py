@@ -38,7 +38,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 	elif MediaSize.thumbnail not in generate_types:
 		generate_types.append(MediaSize.thumbnail)
 
-	for size in copy_gentypes:
+	for size in generate_types:
 		generated_file = m.resize_image(original_file.getvalue(), size, trim)
 		generated_sha256 = hashlib.sha256(generated_file).hexdigest()
 		generated_file_name = f"{size.value}_{file_name}"
