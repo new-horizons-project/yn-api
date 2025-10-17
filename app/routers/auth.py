@@ -1,19 +1,14 @@
 from datetime import datetime, timedelta, timezone
-#from typing import Annotated
 
-#import jwt
 from fastapi import Depends, APIRouter, HTTPException, Request
 from fastapi.security import (
-	OAuth2PasswordRequestForm, #OAuth2PasswordBearer,
+	OAuth2PasswordRequestForm,
 	HTTPBearer, HTTPAuthorizationCredentials
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-#from jwt.exceptions import InvalidTokenError
-#from passlib.context import CryptContext
-#from pydantic import BaseModel
 
 from ..config import settings
-from ..schema.token import Token, AccessToken, RefreshToken
+from ..schema.token import Token, AccessToken
 from ..utils.security import (
 	create_access_token, create_refresh_token, validate_refresh_token
 )
