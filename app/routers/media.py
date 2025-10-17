@@ -14,7 +14,7 @@ router = APIRouter(prefix="/static", tags=["Static Media"])
 
 @router.get("/{media_id}")
 async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, db: AsyncSession = Depends(get_session)):
-	obj = await media_db.get_media_by_id(media_id, db)
+	obj = await media_db.get_media_by_id(db, media_id)
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")
@@ -46,7 +46,7 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 @router.get("/{media_id}/information", dependencies=[Depends(jwt_auth_check_permission([UserRoles.admin]))],
 			response_model=MediaInformation)
 async def get_media_information(media_id: int, db: AsyncSession = Depends(get_session)):
-	obj = await media_db.get_media_by_id(media_id, db)
+	obj = await media_db.get_media_by_id(db, media_id)
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")

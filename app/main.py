@@ -94,7 +94,7 @@ app.add_middleware(
     allow_origins=[config.settings.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Access-Control-Allow-Origin"]
+    allow_headers=["Access-Control-Allow-Origin", "Authorization"]
 )
 
 app.include_router(auth_router)

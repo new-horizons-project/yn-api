@@ -9,6 +9,8 @@ class Config(BaseSettings):
 
 	# General
 	APP_NAME: str = "New Horizons Project"
+	SECURED: bool = True
+	DEV: bool = False
 
 	# JWT
 	SECRET_KEY: str

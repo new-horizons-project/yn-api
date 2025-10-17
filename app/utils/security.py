@@ -80,8 +80,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
-async def validate_refresh_token(credentials: HTTPAuthorizationCredentials, db: AsyncSession) -> Dict[str, Any]:
-	token = credentials.credentials
+async def validate_refresh_token(token: str, db: AsyncSession) -> Dict[str, Any]:
 	payload = decode_token(token)
 
 	if not await check_jwt_token(db, token):
