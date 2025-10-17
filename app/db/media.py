@@ -33,7 +33,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 		used_topic_id = topic_id,
 	)
 
-	copy_gentypes = generate_types
+	copy_gentypes = generate_types.copy()
 
 	if MediaSize.thumbnail not in copy_gentypes:
 		copy_gentypes.append(MediaSize.thumbnail)
