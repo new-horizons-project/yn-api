@@ -4,6 +4,7 @@ from .topic import router as topic_router, router_public as topic_router_public
 from .users import router as user_router, router_public as user_router_public
 from .admin import router as admin_router
 from .translation_codes import router as translation_codes_router
+from .media import router as media_router
 
 __all__ = (
 	"auth_router",
@@ -14,5 +15,6 @@ __all__ = (
 	"user_router_public",
 	"user_router",
     "admin_router",
-	"translation_codes_router"
+	"translation_codes_router",
+	"media_router"
 )

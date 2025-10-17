@@ -1,31 +1,28 @@
 from datetime import datetime, timedelta, timezone
-#from typing import Annotated
 
-#import jwt
-from fastapi import Depends, APIRouter, HTTPException, Request
+from fastapi import Depends, APIRouter, HTTPException, Request, Response, Cookie
 from fastapi.security import (
-	OAuth2PasswordRequestForm, #OAuth2PasswordBearer,
+	OAuth2PasswordRequestForm,
 	HTTPBearer, HTTPAuthorizationCredentials
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-#from jwt.exceptions import InvalidTokenError
-#from passlib.context import CryptContext
-#from pydantic import BaseModel
 
 from ..config import settings
-from ..schema.token import Token, AccessToken, RefreshToken
+from ..schema.token import Token, AccessToken
 from ..utils.security import (
 	create_access_token, create_refresh_token, validate_refresh_token
 )
 from ..db import get_session, schema, users as udbfunc, jwt as jwtdb
 from ..db.enums import JWT_Type
+from .. import config
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
 
 @router.post("/login", response_model=Token)
-async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_session)) -> Token:
+async def login(request: Request, response: Response, form: OAuth2PasswordRequestForm = Depends(), 
+				db: AsyncSession = Depends(get_session)) -> Token:
 	user = await udbfunc.get_user_by_username(db, form.username)
 
 	if not user:
@@ -74,17 +71,28 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), d
 	await db.commit()
 	await db.refresh(db_refresh_token)
 
+	response.set_cookie(
+		key="refresh_token",
+		value=refresh_token,
+		httponly=True,
+		secure=True,
+		samesite="lax" if not config.settings.DEV else "none",
+		max_age=config.settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+	)
+
 	return Token(
 		access_token=access_token,
-		refresh_token=refresh_token,
 		token_type="bearer",
 	)
 
 
 @router.post("/renew_access", response_model=AccessToken)
-async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depends(security),
-							   db: AsyncSession = Depends(get_session)) -> AccessToken:
-	payload = await validate_refresh_token(credentials, db)
+async def refresh_access_token(db: AsyncSession = Depends(get_session), 
+							   refresh_token: str | None = Cookie(default=None)) -> AccessToken:
+	if refresh_token is None:
+		raise HTTPException(status_code=401, detail="Refresh token not found")
+
+	payload = await validate_refresh_token(refresh_token, db)
 
 	if payload.get("type") != JWT_Type.refresh.value:
 		raise HTTPException(status_code=401, detail="Invalid token type")
@@ -98,9 +106,12 @@ async def refresh_access_token(credentials: HTTPAuthorizationCredentials = Depen
 
 
 @router.post("/logout")
-async def logout(credentials: HTTPAuthorizationCredentials = Depends(security),
+async def logout(refresh_token: str | None = Cookie(default=None),
 				 db: AsyncSession = Depends(get_session)):
-	payload = await validate_refresh_token(credentials, db)
+	if refresh_token is None:
+		raise HTTPException(status_code=401, detail="Refresh token not found")
+
+	payload = await validate_refresh_token(refresh_token, db)
 
 	if not await jwtdb.revoke_jwt_token(db, payload.get("jti")):
 		raise HTTPException(status_code=401, detail="Token not found")
