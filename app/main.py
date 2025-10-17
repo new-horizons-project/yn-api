@@ -4,6 +4,7 @@ from datetime import datetime
 
 import fastapi
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from colorama import Fore, Style
 from user_agents import parse
@@ -88,6 +89,14 @@ def ping(request: Request):
     }
 
     return info
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[config.settings.FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["Access-Control-Allow-Origin"]
+)
 
 app.include_router(auth_router)
 app.include_router(user_router)

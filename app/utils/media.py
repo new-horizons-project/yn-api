@@ -4,7 +4,7 @@ import hashlib
 
 from ..db.enums import MediaSize
 
-def resize_image(image_data: bytes, size: MediaSize) -> bytes:
+def resize_image(image_data: bytes, size: MediaSize, trim: bool = False) -> bytes:
 	image = Image.open(BytesIO(image_data))
 	
 	match size:
@@ -16,6 +16,8 @@ def resize_image(image_data: bytes, size: MediaSize) -> bytes:
 			image.thumbnail((320, 320))
 		case MediaSize.thumbnail:
 			image.thumbnail((128, 128))
+
+	image = trim_transparent(image) if trim else image
 
 	output = BytesIO()
 	image.save(output, format="PNG")
@@ -30,3 +32,14 @@ def verify_image_by_path(file_path: str, sha256_hash: str) -> bool:
 			return calculated_hash == sha256_hash
 	except FileNotFoundError as e:
 		raise e
+	
+
+def trim_transparent(image: Image.Image) -> Image.Image:
+    if image.mode != "RGBA":
+        image = image.convert("RGBA")
+    
+    # Получаем альфа-канал (прозрачность)
+    bbox = image.getchannel("A").getbbox()
+    if bbox:
+        image = image.crop(bbox)
+    return image

@@ -15,7 +15,7 @@ from ..db.enums import MediaType, MediaSize
 
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
-				    generate_types: list[MediaSize] = [MediaSize.thumbnail]) -> schema.MediaObject:
+				    generate_types: list[MediaSize] = [MediaSize.thumbnail], trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + file.filename
 
 	original_file = BytesIO()
@@ -37,7 +37,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 		generate_types.append(MediaSize.thumbnail)
 
 	for size in generate_types:		
-		generated_file = m.resize_image(original_file.getvalue(), size)
+		generated_file = m.resize_image(original_file.getvalue(), size, trim)
 		generated_sha256 = hashlib.sha256(generated_file).hexdigest()
 		generated_file_name = f"{size.value}_{file_name}"
 
@@ -80,7 +80,13 @@ async def init_media(db: AsyncSession):
 			file = UploadFile(
 				filename="logo.png",
 				file=BytesIO(logo_data)),
-			content_type = MediaType.system
+			content_type = MediaType.system,
+			generate_types=[
+				MediaSize.small,
+				MediaSize.medium,
+				MediaSize.large
+			],
+			trim=True
 		)
 
 

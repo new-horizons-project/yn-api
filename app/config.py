@@ -30,4 +30,7 @@ class Config(BaseSettings):
 	DATABASE_PASSWORD: str
 	DATABASE_DBNAME: str
 
+	# CORS
+	FRONTEND_URL: str
+
 settings = Config()
