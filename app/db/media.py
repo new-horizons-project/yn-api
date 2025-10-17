@@ -33,10 +33,12 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 		used_topic_id = topic_id,
 	)
 
-	if MediaSize.thumbnail not in generate_types:
-		generate_types.append(MediaSize.thumbnail)
+	copy_gentypes = generate_types
 
-	for size in generate_types:		
+	if MediaSize.thumbnail not in copy_gentypes:
+		copy_gentypes.append(MediaSize.thumbnail)
+
+	for size in copy_gentypes:
 		generated_file = m.resize_image(original_file.getvalue(), size, trim)
 		generated_sha256 = hashlib.sha256(generated_file).hexdigest()
 		generated_file_name = f"{size.value}_{file_name}"
@@ -67,7 +69,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 
 
 async def init_media(db: AsyncSession):
-	if (await db.execute(select(schema.MediaObject))).scalar_one_or_none() is not None:
+	if await db.execute(select(exists().where(schema.MediaObject))) is not None:
 		return
 	
 	logo_data: bytes = 0
@@ -94,7 +96,7 @@ async def init_media(db: AsyncSession):
 
 async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = False) -> schema.MediaObject | None:
 	if not preload_all:
-		result = await db.get(schema.MediaObject, media_id)
+		return await db.get(schema.MediaObject, media_id)
 
 	result = await db.scalar(
 		select(schema.MediaObject)
