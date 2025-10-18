@@ -69,7 +69,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 
 
 async def init_media(db: AsyncSession):
-	if await db.execute(select(exists().where(schema.MediaObject))) is not None:
+	if await db.scalar(select(exists().where(schema.MediaObject.id != None))):
 		return
 	
 	logo_data: bytes = 0
