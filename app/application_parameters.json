@@ -1,7 +1,7 @@
 {
 	"application" : {
 		"ui" : {
-			"logo_id" : {
+			"logo_media_id" : {
 				"parameter" : 1,
 				"type" : "integer",
 				"kind" : "gap",

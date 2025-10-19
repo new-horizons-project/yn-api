@@ -95,7 +95,7 @@ async def init_media(db: AsyncSession):
 		trim=True
 	)
 
-	await set_default_value(db, "application.ui.logo_id", media.id)
+	await set_default_value(db, "application.ui.logo_media_id", media.id)
 
 
 async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = False) -> schema.MediaObject | None:

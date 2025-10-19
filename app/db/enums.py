@@ -53,8 +53,8 @@ class MediaSize(str, Enum):
 
 
 class AP_kind(str, Enum):
-	gap = "GAP"
-	lap = "LAP"
+	gap = "gap"
+	lap = "lap"
 
 
 class AP_type(str, Enum):

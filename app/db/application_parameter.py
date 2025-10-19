@@ -1,13 +1,13 @@
-from datetime import datetime
+
 from typing import Optional
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
-from urllib.parse import urlparse
 
 from . import schema, users, enums
 from ..schema.application_parameter import ApplicationParameterValue
+from ..utils import application_parameter as ap_utils
 
 
 class ApplicationParameterNotFound(Exception):
@@ -20,6 +20,14 @@ async def get_application_parameter_by_name(db: AsyncSession, name: str) -> sche
         select(schema.ApplicationParameter).where(schema.ApplicationParameter.name == name)
     )
     return result.scalar_one_or_none() 
+
+
+async def check_application_parameter_exists(db: AsyncSession, name: str) -> bool:
+	return (await db.execute(select(
+		exists().where(
+			schema.ApplicationParameter.name == name
+		)
+	))).scalar()
 
 
 async def get_application_parameter_value_by_id(db: AsyncSession, ap_id: uuid.UUID) -> schema.APValue | None:
@@ -92,40 +100,6 @@ async def user_get_application_parameter(db: AsyncSession, name: str, user_id: O
 	)
 
 
-def validate_data(data: str, data_type: enums.AP_type):
-	match data_type:
-		case enums.AP_type.string:
-			return True
-		
-		case enums.AP_type.bool:
-			return isinstance(data, bool)
-		
-		case enums.AP_type.integer:
-			return isinstance(data, int)
-		
-		case enums.AP_type.float:
-			return isinstance(data, float)
-		
-		case enums.AP_type.string:
-			return isinstance(data, str)
-		
-		case enums.AP_type.list:
-			return isinstance(data, list)
-		
-		case enums.AP_type.datetime:
-			return isinstance(data, datetime)
-		
-		case enums.AP_type.uuid:
-			return isinstance(data, uuid.UUID)
-		
-		case enums.AP_type.url:
-			parsed = urlparse(data)
-			return bool(parsed.scheme and parsed.netloc)
-		
-		case _:
-			return False
-		
-
 async def add_application_parameter_value(db: AsyncSession, ap_id: uuid.UUID, value: str):
 	result = await get_application_parameter_with_value_by_id(db, ap_id)
 
@@ -134,7 +108,7 @@ async def add_application_parameter_value(db: AsyncSession, ap_id: uuid.UUID, va
 	
 	application_parameter, ap_value = result
 
-	if not validate_data(value, application_parameter.type):
+	if not ap_utils.validate_data(value, application_parameter.type):
 		raise ValueError()
 
 	if not ap_value:
@@ -166,10 +140,27 @@ async def delete_application_parameter_value(db: AsyncSession, ap_id: uuid.UUID,
 
 async def set_default_value(db: AsyncSession, name: str, value: any):
 	ap = await get_application_parameter_by_name(db, name)
-
-	if not validate_data(value, ap.type):
+	
+	if not ap_utils.validate_data(value, ap.type):
 		raise ValueError()
 
 	ap.default_value = str(value)
 
 	await db.commit()
+
+
+async def init_ap(db: AsyncSession):
+	for ap_dc in ap_utils.get_application_parameters():
+		if await check_application_parameter_exists(db, ap_dc.name):
+			continue
+		
+		new_ap = schema.ApplicationParameter(
+			name             = ap_dc.name,
+			kind             = ap_dc.kind,
+			type             = ap_dc.type,
+			visibility       = ap_dc.visibility,
+			default_value    = ap_dc.default_value
+		)
+
+		db.add(new_ap)
+		await db.commit()

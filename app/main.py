@@ -10,7 +10,7 @@ from colorama import Fore, Style
 from user_agents import parse
 
 from .routers import *
-from .db import init_db, get_session, users, topic, media
+from .db import init_db, get_session, users, topic, media, application_parameter as ap
 from . import __version__, __release_subname__, config
 
 started_at = datetime.now()
@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
     session = await anext(session_generator)
 
     try:
+        await ap.init_ap(session)
         await users.create_root_user(session)
         await topic.create_base_translation(session)
         await media.init_media(session)
