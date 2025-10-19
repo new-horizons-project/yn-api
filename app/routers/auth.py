@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, APIRouter, HTTPException, Request, Response, Cookie
 from fastapi.security import (
 	OAuth2PasswordRequestForm,
-	HTTPBearer, HTTPAuthorizationCredentials
+	HTTPBearer
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 

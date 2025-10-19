@@ -1,48 +1,49 @@
 from logging.config import fileConfig
-
+from sqlalchemy import engine_from_config, pool
 from alembic import context
-from sqlalchemy import create_engine, pool
-
 from app.db import Base, ALEMBIC_DATABASE_URL
 
 config = context.config
+target_metadata = Base.metadata
 
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 
-def start_migrations():
-	with context.begin_transaction():
-			context.run_migrations()
+def run_migrations_offline():
+    context.configure(
+        url=ALEMBIC_DATABASE_URL,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        compare_type=True
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
 
 
-def migrate_offline():
-	context.configure(
-		url=ALEMBIC_DATABASE_URL,
-		target_metadata=Base.metadata,
-		literal_binds=True
-	)
+def run_migrations_online():
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        url=ALEMBIC_DATABASE_URL,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
-	start_migrations()
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            render_as_batch=True
+        )
 
-
-def migrate_running():
-	connection = create_engine(
-		url=ALEMBIC_DATABASE_URL,
-		poolclass=pool.NullPool
-	)
-
-	with connection.connect() as active_conn:
-		context.configure(
-			connection=active_conn,
-			target_metadata=Base.metadata	
-		)
-
-		start_migrations()
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():
-    migrate_offline()
+    run_migrations_offline()
 else:
-    migrate_running()
+    run_migrations_online()

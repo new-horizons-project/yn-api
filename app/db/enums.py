@@ -50,3 +50,25 @@ class MediaSize(str, Enum):
 	medium     = "medium"
 	small      = "small"
 	thumbnail  = "thumbnail"
+
+
+class AP_kind(str, Enum):
+	gap = "GAP"
+	lap = "LAP"
+
+
+class AP_type(str, Enum):
+	datetime = "datetime"
+	integer = "integer"
+	string = "string"
+	float = "float"
+	bool = "bool"
+	list = "list"
+	uuid = "uuid"
+	url = "url"
+
+
+class AP_visibility(str, Enum):
+	public = "public"
+	protected = "protected"
+	private = "private"
