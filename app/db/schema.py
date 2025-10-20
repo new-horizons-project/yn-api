@@ -24,7 +24,7 @@ class User(Base):
 	username                 : Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 	password_hash            : Mapped[str] = mapped_column(String(255), nullable=False)
 	registration_date        : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
-	role                     : Mapped[str] = mapped_column(SqlEnum(UserRoles, native_enum=False), default=UserRoles.user)
+	role                     : Mapped[UserRoles] = mapped_column(SqlEnum(UserRoles, native_enum=False), default=UserRoles.user)
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -208,3 +208,29 @@ class MediaObject(Base):
 		back_populates  = "media_object",
 		foreign_keys    = [used_topic_id]
 	)
+
+
+class ApplicationParameter(Base):
+	__tablename__ = "application_parameters"
+
+	id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+	name             : Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+	kind             : Mapped[AP_kind] = mapped_column(SqlEnum(AP_kind, native_enum=False), nullable=False)
+	type             : Mapped[AP_type] = mapped_column(SqlEnum(AP_type, native_enum=False), nullable=False)
+	visibility       : Mapped[AP_visibility] = mapped_column(SqlEnum(AP_visibility, native_enum=False), nullable=False)
+	default_value    : Mapped[str] = mapped_column(Text, nullable=True)
+
+	value: Mapped[list["APValue"]] = relationship(back_populates="parameter", cascade="all, delete-orphan")
+
+
+class APValue(Base):
+	__tablename__ = "ap_value"
+
+	id       : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+	value    : Mapped[str] = mapped_column(Text, nullable=True)
+	override : Mapped[bool] = mapped_column(Boolean, default=False)
+	ap_id    : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),
+		ForeignKey("application_parameters.id", ondelete="CASCADE"), nullable=False,
+    )
+	
+	parameter: Mapped["ApplicationParameter"] = relationship(back_populates="value")

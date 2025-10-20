@@ -1,0 +1,13 @@
+{
+	"application" : {
+		"ui" : {
+			"logo_media_id" : {
+				"parameter" : 1,
+				"type" : "integer",
+				"kind" : "gap",
+				"default_value" : "",
+				"visibility" : "public"
+			}
+		}
+	}
+}

@@ -12,6 +12,7 @@ from . import schema
 from .. import config
 from ..utils import media as m
 from ..db.enums import MediaType, MediaSize
+from ..db.application_parameter import set_default_value
 
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
@@ -64,6 +65,7 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 
 	db.add(media)
 	await db.commit()
+	await db.refresh(media)
 
 	return media
 
@@ -77,7 +79,7 @@ async def init_media(db: AsyncSession):
 	with open("./media/logo.png", "rb") as f:
 		logo_data = f.read()
 		
-	await add_media(
+	media = await add_media(
 		db,
 		topic_id = None,
 		user = schema.User(id=1),
@@ -92,6 +94,8 @@ async def init_media(db: AsyncSession):
 		],
 		trim=True
 	)
+
+	await set_default_value(db, "application.ui.logo_media_id", media.id)
 
 
 async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = False) -> schema.MediaObject | None:
