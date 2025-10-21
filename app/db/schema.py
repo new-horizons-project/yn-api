@@ -180,7 +180,7 @@ class AuditEffectedObject(Base):
 	__tablename__ = "audit_effected_objects"
 
 	id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-	audit_id         : Mapped[int] = mapped_column(ForeignKey("audit.id", ondelete="CASCADE"), nullable=False)
+	audit_id         : Mapped[uuid.UUID] = mapped_column(ForeignKey("audit.id", ondelete="CASCADE"), nullable=False)
 	object_type      : Mapped[ObjectType] = mapped_column(SqlEnum(ObjectType, native_enum=False), nullable=False)
 	object_id        : Mapped[int] = mapped_column(Integer, nullable=False)
 
