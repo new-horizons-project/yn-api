@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     {Fore.BLUE + Style.BRIGHT}                       ##
     {Fore.BLUE + Style.BRIGHT}                      ###
     {Fore.BLUE + Style.BRIGHT}                **## *###
-    {Fore.BLUE + Style.BRIGHT}              ++**# **##         {Fore.CYAN + Style.BRIGHT}New Horizons Project{Style.RESET_ALL}
+    {Fore.BLUE + Style.BRIGHT}              ++**# **##         {Fore.CYAN + Style.BRIGHT}New Horizons{Style.RESET_ALL}
     {Fore.BLUE + Style.BRIGHT}        =-----===+ ***#          {Fore.CYAN + Style.BRIGHT}API Codename {Style.RESET_ALL}{Fore.YELLOW}Yoshino Niku{Fore.RESET}
     {Fore.BLUE + Style.BRIGHT}   =-----== = ====+++**                    
     {Fore.BLUE + Style.BRIGHT}  ---      ===++ +*******#       {Style.BRIGHT + Fore.CYAN}Python          : {Style.RESET_ALL}{Fore.YELLOW}{platform.python_version()}{Fore.RESET}
