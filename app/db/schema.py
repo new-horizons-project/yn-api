@@ -30,11 +30,17 @@ class User(Base):
 
 	topic                        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
 	tokens                       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
-	topic_translations           : Mapped[TopicTranslation] = relationship(back_populates="user")
-	topic_translations_editor    : Mapped[TopicTranslation] = relationship(back_populates="user_last_editor")
 	audit_log                    : Mapped[list[Audit]] = relationship(back_populates="user")
 	media_owner                  : Mapped[list[MediaObject]] = relationship(back_populates="user_uploader", foreign_keys="[MediaObject.uploaded_by_user_id]")
 	media_uploader               : Mapped[list[MediaObject]] = relationship(back_populates="user_owner", foreign_keys="[MediaObject.used_user_id]")
+	topic_translations: Mapped[list[TopicTranslation]] = relationship(
+		back_populates="user",
+		foreign_keys="[TopicTranslation.creator_user_id]"
+	)
+	topic_translations_editor: Mapped[list[TopicTranslation]] = relationship(
+		back_populates="user_last_editor",
+		foreign_keys="[TopicTranslation.last_edited_by]"
+	)
 
 
 class JWT_Token(Base):
@@ -104,10 +110,16 @@ class TopicTranslation(Base):
 	text             : Mapped[str] = mapped_column(Text, nullable=False)
 	first            : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
-	translation: Mapped[Translation] = relationship(back_populates="topic_translations")
-	user: Mapped[User] = relationship(back_populates="topic_translations")
-	user_last_editor: Mapped[User] = relationship(back_populates="topic_translations_editor")
-	topic: Mapped[Topic] = relationship(back_populates="translations")
+	translation      : Mapped[Translation] = relationship(back_populates="topic_translations")
+	topic            : Mapped[Topic] = relationship(back_populates="translations")
+	user: Mapped[User] = relationship(
+		back_populates="topic_translations",
+		foreign_keys=[creator_user_id]
+	)
+	user_last_editor: Mapped[User] = relationship(
+		back_populates="topic_translations_editor",
+		foreign_keys=[last_edited_by]
+	)
 
 
 class Category(Base):
@@ -236,6 +248,6 @@ class APValue(Base):
 	override : Mapped[bool] = mapped_column(Boolean, default=False)
 	ap_id    : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),
 		ForeignKey("application_parameters.id", ondelete="CASCADE"), nullable=False,
-    )
+	)
 	
 	parameter: Mapped["ApplicationParameter"] = relationship(back_populates="value")
