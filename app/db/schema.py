@@ -27,6 +27,7 @@ class User(Base):
 	role                     : Mapped[UserRoles] = mapped_column(SqlEnum(UserRoles, native_enum=False), default=UserRoles.user)
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
+	is_root                  : Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 	topic                        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
 	tokens                       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")

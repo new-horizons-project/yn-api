@@ -1,3 +1,5 @@
+import uuid
+
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +16,7 @@ async def get_jwt_token_by_id(db: AsyncSession, token_id: str) -> schema.JWT_Tok
 	return res.scalars().first()
 
 
-async def get_jwt_token_by_user_id(db: AsyncSession, user_id: int) -> list[schema.JWT_Token] | None:
+async def get_jwt_token_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> list[schema.JWT_Token] | None:
 	res = await db.execute(select(schema.JWT_Token).where(schema.JWT_Token.user_id == user_id,
 													      schema.JWT_Token.is_revoked == False))
 	return res.scalars().all()

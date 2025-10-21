@@ -13,6 +13,7 @@ from .. import config
 from ..utils import media as m
 from ..db.enums import MediaType, MediaSize
 from ..db.application_parameter import set_default_value
+from ..db.users import get_root_user
 
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
@@ -74,6 +75,11 @@ async def init_media(db: AsyncSession):
 	if await db.scalar(select(exists().where(schema.MediaObject.id != None))):
 		return
 	
+	root_user = await get_root_user(db)
+
+	if not root_user:
+		raise Exception("Root user not found")
+	
 	logo_data: bytes = 0
 
 	with open("./media/logo.png", "rb") as f:
@@ -82,7 +88,7 @@ async def init_media(db: AsyncSession):
 	media = await add_media(
 		db,
 		topic_id = None,
-		user = schema.User(id=1),
+		user = root_user,
 		file = UploadFile(
 			filename="logo.png",
 			file=BytesIO(logo_data)),

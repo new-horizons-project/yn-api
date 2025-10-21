@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +18,7 @@ def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 		payload = decode_token(token)
 
 		try:
-			user_id = int(payload.get("sub"))
+			user_id = uuid.UUID(payload.get("sub"))
 		except (TypeError, ValueError):
 			raise HTTPException(status_code=401, detail="Invalid token payload")
 
@@ -48,4 +50,4 @@ async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depend
 	if not user_id:
 		raise HTTPException(status_code=401, detail="Invalid token payload")
 
-	return int(user_id)
+	return uuid.UUID(user_id)

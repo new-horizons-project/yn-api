@@ -44,9 +44,9 @@ async def lifespan(app: FastAPI):
 
     try:
         await ap.init_ap(session)
-        """ await users.create_root_user(session)
+        await users.create_root_user(session)
         await topic.create_base_translation(session)
-        await media.init_media(session) """
+        await media.init_media(session)
         yield
     finally:
         await session.close()
