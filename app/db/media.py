@@ -15,6 +15,15 @@ from ..db.enums import MediaType, MediaSize
 from ..db.application_parameter import set_default_value
 
 
+async def media_exist(db: AsyncSession, cover_image_id: int) -> int:
+	return await db.scalar(
+		select(
+			exists()
+			.where(schema.MediaObject.id == cover_image_id)
+		)
+	)
+
+
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
 				    generate_types: list[MediaSize] | None = None, trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + file.filename

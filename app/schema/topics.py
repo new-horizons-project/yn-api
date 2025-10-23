@@ -6,15 +6,16 @@ from datetime import datetime
 from ..db.enums import ParseMode
 
 class TopicBase(BaseModel):
-    id: int
-    name: str
-    created_at: datetime
-    edited_at: datetime
-    creator_user_id: Optional[int]
-    image_url: Optional[str]
+	id: int
+	name: str
+	created_at: datetime
+	edited_at: datetime
+	creator_user_id: Optional[int]
+	cover_image_id:  Optional[int]
+	category_id:     int
 
-    class Config:
-        from_attributes = True
+	class Config:
+		from_attributes = True
 
 class Translation(BaseModel):
 	id: int
@@ -47,7 +48,8 @@ class TopicTranslationCreated(BaseModel):
 class TopicCreateRequst(BaseModel):
 	name:            str
 	translation_id:  int
-	image_url:       Optional[str]
+	category_id:     int
+	cover_image_id:  Optional[int]
 	parse_mode:      ParseMode
 	text:            str
 

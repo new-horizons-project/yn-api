@@ -72,14 +72,12 @@ class Topic(Base):
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
+	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
 
 	creator: Mapped[User] = relationship(back_populates="topic")
 	translations: Mapped[list[TopicTranslation]] = relationship(back_populates="topic", cascade="all, delete-orphan")
 
-	categories: Mapped[list[Category]] = relationship(
-		secondary="categories_in_topic",
-		back_populates="topic"
-	)
+	category: Mapped["Category"] = relationship(back_populates="topics")
 
 	tags: Mapped[list[Tag]] = relationship(
 		secondary="tags_in_topic",
@@ -108,22 +106,15 @@ class TopicTranslation(Base):
 class Category(Base):
 	__tablename__ = "categories"
 
-	id             : Mapped[int] = mapped_column(primary_key=True)
+	id             : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	name           : Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 	description    : Mapped[str] = mapped_column(Text)
 	display_mode   : Mapped[DisplayMode] = mapped_column(SqlEnum(DisplayMode, native_enum=False))
 
-	topic: Mapped[list[Topic]] = relationship(
-		secondary="categories_in_topic",
-		back_populates="categories"
-	)
-
-
-class CategoryInTopic(Base):
-	__tablename__ = "categories_in_topic"
-
-	topic_id       : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), primary_key=True)
-	category_id    : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True)
+	topics: Mapped[list[Topic]] = relationship(
+        back_populates="category",
+        cascade="all, delete-orphan"
+    )
 
 
 class Tag(Base):

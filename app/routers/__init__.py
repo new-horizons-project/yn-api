@@ -6,6 +6,7 @@ from .admin import router as admin_router
 from .translation_codes import router as translation_codes_router
 from .media import router as media_router
 from .application_parameter import router as ap_router, router_public as ap_router_public
+from .category import router as category_router, router_public as category_router_public
 
 __all__ = (
 	"auth_router",
@@ -19,5 +20,7 @@ __all__ = (
 	"translation_codes_router",
 	"media_router",
 	"ap_router",
-	"ap_router_public"
+	"ap_router_public",
+	"category_router",
+	"category_router_public"
 )
