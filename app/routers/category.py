@@ -26,6 +26,7 @@ async def search_categories(
     db: AsyncSession = Depends(get_session)
 ) -> category.PaginatedCategories:
 	stmt = select(schema.Category)
+
 	if search:
 		stmt = stmt.where(schema.Category.name.ilike(f"%{search}%"))
 
@@ -53,6 +54,7 @@ async def create_category(req: category.CategoryCreateRequst, db: AsyncSession =
 	category_id = await category_db.create(db, req)
 	return {"detail": "Category created successfully", "category_id": category_id}
 
+
 @router.put("/{category_id}")
 async def update_category(category_id: int, req: category.CategoryUpdateRequst, db: AsyncSession = Depends(get_session)):
 	if not await category_db.exist_by_id(db, category_id):
@@ -63,6 +65,7 @@ async def update_category(category_id: int, req: category.CategoryUpdateRequst, 
 		return {"detail": "Category updated successfully"}
 
 	raise HTTPException(status_code=304, detail="Category not modified")
+
 
 @router.delete("/{category_id}")
 async def delete_category(
