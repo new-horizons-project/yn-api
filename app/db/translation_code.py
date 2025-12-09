@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 
@@ -12,6 +12,13 @@ async def get_translation_code_list(db: AsyncSession) -> list[schema.Translation
 	)
 	return res.all()
 
+async def translation_exists_by_id(translation_id: int, db: AsyncSession) -> bool:
+	return await db.scalar(
+		select(
+			exists()
+			.where(schema.Translation.id == translation_id)
+		)
+	)
 
 async def get_translation_code_by_id(translation_id: int, db: AsyncSession) -> schema.Translation | None:
 	return await db.get(schema.Translation, translation_id)

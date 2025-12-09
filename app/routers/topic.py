@@ -8,9 +8,16 @@ from datetime import datetime, timezone
 
 from ..utils.jwt import jwt_auth_check_permission, jwt_extract_user_id
 from ..utils.security import hash_topic_name
-from ..db       import get_session, schema, topic as topic_db, tag as tag_db
+from ..db       import (
+	get_session, schema, 
+	topic    as topic_db, 
+	tag      as tag_db, 
+	category as category_db,
+	translation_code as tc_db,
+	media as media_db
+)
 from ..db.enums import UserRoles
-from ..schema   import topics, tag
+from ..schema   import topics, tag, category
 
 router = APIRouter(prefix="/topic", tags=["Topic"],
 	dependencies=[
@@ -52,8 +59,10 @@ async def search_topics(
 		sort_column = sort_column.desc()
 	stmt = stmt.order_by(sort_column)
 
-	total_stmt = select(func.count()).select_from(stmt.subquery())
-	total = (await db.execute(total_stmt)).scalar()
+	total = await db.scalar(
+		select(func.count())
+		.select_from(stmt.subquery())
+	)
 
 	offset = (page - 1) * limit
 	stmt = stmt.offset(offset).limit(limit)
@@ -71,10 +80,16 @@ async def search_topics(
 async def create_topic(topic: topics.TopicCreateRequst, 
 					   user_id = Depends(jwt_extract_user_id),
 					   db: AsyncSession = Depends(get_session)):
-	new_topic_id = await topic_db.create_topic(db, topic, user_id)
+	if not await category_db.exist_by_id(db, topic.category_id):
+		raise HTTPException(status_code=404, detail="Category not exists")
+	
+	if not await tc_db.translation_exists_by_id(topic.translation_id, db):
+		raise HTTPException(status_code=404, detail="Translation not exists")
+	
+	if topic.cover_image_id is not None and not await media_db.media_exist(db, topic.cover_image_id):
+		raise HTTPException(status_code=404, detail="Media not exists")
 
-	if not new_topic_id:
-		raise HTTPException(404, "Translation_id (translation code) invalid")
+	new_topic_id = await topic_db.create_topic(db, topic, user_id)
 
 	return {"detail": "Topic created successfully", "topic_id": new_topic_id}
 
@@ -109,6 +124,8 @@ async def add_translation(topic_id: int,
 	translation_code = await topic_db.get_translation_code_by_id(translation.translation_code_id, db)
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
+	
+
 
 	new_translation = schema.TopicTranslation(
 		translation_id    = translation.translation_code_id,
@@ -178,6 +195,11 @@ async def get_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 		raise HTTPException(status_code=404, detail="Topic not found")
 	return topic
 
+@router_public.get("/{topic_id}/category", response_model=category.CategoryBase)
+async def get_topic_category(topic_id: int, db: AsyncSession = Depends(get_session)) -> category.CategoryBase:
+	if not await topic_db.topic_exists(topic_id, db):
+		raise HTTPException(status_code=404, detail="Topic not found")
+	return await topic_db.get_topic_category(topic_id, db)
 
 @router_public.get("/{topic_id}/translations", response_model=list[topics.TopicTranslationBase])
 async def get_translations_by_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
