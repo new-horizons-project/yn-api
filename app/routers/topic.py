@@ -124,15 +124,15 @@ async def add_translation(topic_id: int,
 	translation_code = await topic_db.get_translation_code_by_id(translation.translation_code_id, db)
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
-	
-
 
 	new_translation = schema.TopicTranslation(
 		translation_id    = translation.translation_code_id,
 		creator_user_id   = user_id,
 		topic_id          = topic_id,
 		parse_mode        = translation.parse_mode,
-		text              = translation.text
+		text              = translation.text,
+		last_edited_by    = user_id,
+		first             = False
 	)
 	
 	db.add(new_translation)

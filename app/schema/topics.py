@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from uuid import UUID
 
 from typing import Optional
 from datetime import datetime
@@ -10,7 +11,7 @@ class TopicBase(BaseModel):
 	name: str
 	created_at: datetime
 	edited_at: datetime
-	creator_user_id: Optional[int]
+	creator_user_id: Optional[UUID]
 	cover_image_id:  Optional[int]
 	category_id:     int
 

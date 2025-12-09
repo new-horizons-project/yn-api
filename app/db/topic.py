@@ -117,6 +117,8 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst, user_id) -> i
 		creator_user_id=user_id,
 		parse_mode=topic.parse_mode,
 		text=topic.text,
+		last_edited_by=user_id,
+		first=True
 	)
 
 	db.add(new_translation)

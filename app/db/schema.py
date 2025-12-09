@@ -78,7 +78,7 @@ class Topic(Base):
 	name_hash          : Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
 	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-	imported           : Mapped[bool] = mapped_column(Boolean, nullable=False)
+	imported           : Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	creator_user_id    : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
