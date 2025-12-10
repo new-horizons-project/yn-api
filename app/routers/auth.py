@@ -15,6 +15,7 @@ from ..utils.security import (
 from ..db import get_session, schema, users as udbfunc, jwt as jwtdb
 from ..db.enums import JWT_Type
 from .. import config
+from .. import utils
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -37,7 +38,7 @@ async def login(request: Request, response: Response, form: OAuth2PasswordReques
 			detail="User is disabled"
 		)
 
-	if not udbfunc.verify_password(form.password, user.password_hash):
+	if not utils.security.verify_password(form.password, user.password_hash):
 		raise HTTPException(
 			status_code=400, 
 			detail="Incorrect password"

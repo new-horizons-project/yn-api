@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from . import schema
+from .. import config
 from ..schema.users import UserCreateRequest
-from ..utils.security import hash_password, verify_password
+from ..utils.security import hash_password
+from .application_parameter import set_default_value
 
 
 class DatabaseCorruptUsersException(Exception):
@@ -35,7 +37,7 @@ async def get_user_by_username(db: AsyncSession, username: str) -> schema.User |
 
 async def get_root_user(db: AsyncSession) -> schema.User | None:
     result = await db.execute(
-        select(schema.User).where(schema.User.is_root == True)
+        select(schema.User).where(schema.User.id == config.system_ap.root_user_id)
     )
     
     users = result.scalars().all()
@@ -46,24 +48,25 @@ async def get_root_user(db: AsyncSession) -> schema.User | None:
     return users[0] if users else None
 
 
-async def create_root_user(db: AsyncSession):
-	result = await db.execute(select(schema.User).where(schema.User.is_root == True))
-	user_s = result.scalars().all()
+async def create_root_user(db: AsyncSession):	
+	if config.system_ap.root_user_id is not None:
+		return
 
-	if len(user_s) > 1:
-		raise DatabaseCorruptUsersException()
+	root_user = schema.User(
+		username="root",
+		password_hash=hash_password("root"),
+		role=schema.UserRoles.admin,
+		force_password_change=True,
+		is_disabled=False
+	)
 
-	if len(user_s) < 1:
-		root_user = schema.User(
-			username="root",
-			password_hash=hash_password("root"),
-			role=schema.UserRoles.admin,
-			force_password_change=True,
-			is_disabled=False,
-			is_root=True
-		)
-		db.add(root_user)
-		await db.commit()
+	db.add(root_user)
+	await db.flush()
+
+	config.system_ap.root_user_id = root_user.id
+	await set_default_value(db, "application.system.root_user", root_user.id)
+
+	await db.commit()
 
 
 async def change_user_availability(db: AsyncSession, user_id: uuid.UUID, is_disabled: bool) -> schema.User | None:
@@ -72,7 +75,7 @@ async def change_user_availability(db: AsyncSession, user_id: uuid.UUID, is_disa
 	if not user:
 		return None
 	
-	if user.is_root:
+	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
 	user.is_disabled = is_disabled
@@ -106,7 +109,7 @@ async def update_role(db: AsyncSession, user_id: uuid.UUID, new_role: schema.Use
 	if not user:
 		return None
 	
-	if user.is_root:
+	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
 	user.role = new_role
@@ -123,7 +126,7 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> bool:
 	if not user:
 		return False
 	
-	if user.is_root:
+	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
 	await db.delete(user)
@@ -143,7 +146,7 @@ async def change_username(db: AsyncSession, user_id: uuid.UUID, new_username: st
 	if not user:
 		return None
 	
-	if user.is_root:
+	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
 	user.username = new_username

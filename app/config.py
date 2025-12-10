@@ -1,4 +1,7 @@
+import uuid
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.ext.asyncio import AsyncSession
 
 class Config(BaseSettings):
 	model_config = SettingsConfigDict(
@@ -35,4 +38,10 @@ class Config(BaseSettings):
 	# CORS
 	FRONTEND_URL: str
 
+
+class SystemAP():
+	root_user_id: uuid.UUID | None
+
+
 settings = Config()
+system_ap = SystemAP()
