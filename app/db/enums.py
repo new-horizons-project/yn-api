@@ -70,5 +70,5 @@ class AP_type(str, Enum):
 
 class AP_visibility(str, Enum):
 	public = "public"
-	protected = "protected"
+	system = "system"
 	private = "private"

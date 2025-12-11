@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Depends, APIRouter, HTTPException, Body, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -28,7 +30,7 @@ router_public = APIRouter(
 
 
 @router.get("/", response_model=users.UserBase)
-async def get_user(user_id: int = Depends(jwt_extract_user_id), db: AsyncSession = Depends(get_session)):
+async def get_user(user_id: uuid.UUID = Depends(jwt_extract_user_id), db: AsyncSession = Depends(get_session)):
 	user = await udbfunc.get_user_by_id(db, user_id)
 
 	if not user:
@@ -38,7 +40,7 @@ async def get_user(user_id: int = Depends(jwt_extract_user_id), db: AsyncSession
 
 
 @router.put("/change_username", response_model=users.UserBase)
-async def change_username(new_username: str, user_id: int = Depends(jwt_extract_user_id), 
+async def change_username(new_username: str, user_id: uuid.UUID = Depends(jwt_extract_user_id), 
 						  db: AsyncSession = Depends(get_session)):
 	try:
 		user = await udbfunc.change_username(db, user_id, new_username)
@@ -55,7 +57,7 @@ async def change_username(new_username: str, user_id: int = Depends(jwt_extract_
 
 @router.patch("/change_password")
 async def change_password(req: users.UserResetPasswordRequest,
-						  user_id: int = Depends(jwt_extract_user_id),
+						  user_id: uuid.UUID = Depends(jwt_extract_user_id),
 						  db: AsyncSession = Depends(get_session)):
 	user = await udbfunc.get_user_by_id(db, user_id)
 
@@ -77,14 +79,14 @@ async def change_password(req: users.UserResetPasswordRequest,
 
 
 @router.get("/jwt/", response_model=list[users.JWTUserMinimal])
-async def get_jwt(user_id: int = Depends(jwt_extract_user_id),
+async def get_jwt(user_id: uuid.UUID = Depends(jwt_extract_user_id),
 				  db: AsyncSession = Depends(get_session)):
 	return await jwtdb.get_jwt_token_by_user_id(db, user_id)
 
 
 @router.patch("/jwt/{jwt_id}")
 async def revoke_session(jwt_id: str, 
-						 user_id: int = Depends(jwt_extract_user_id),
+						 user_id: uuid.UUID = Depends(jwt_extract_user_id),
 						 db: AsyncSession = Depends(get_session)):
 	token = await jwtdb.get_jwt_token_by_id(db, jwt_id)
 

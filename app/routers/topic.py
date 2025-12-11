@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi    import Depends, APIRouter, HTTPException, Body, Query
 from sqlalchemy	import select, exists, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,7 +115,7 @@ async def change_name(topic_id: int,
 @router.post("/{topic_id}/add_translation")
 async def add_translation(topic_id: int, 
 						  translation: topics.TranslationCreateRequst, 
-						  user_id: int = Depends(jwt_extract_user_id),
+						  user_id: uuid.UUID = Depends(jwt_extract_user_id),
 						  db: AsyncSession = Depends(get_session)) -> topics.TopicTranslationCreated:
 	topic = await topic_db.get_topic(topic_id, db)
 	if not topic:
@@ -122,15 +124,15 @@ async def add_translation(topic_id: int,
 	translation_code = await topic_db.get_translation_code_by_id(translation.translation_code_id, db)
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
-	
-
 
 	new_translation = schema.TopicTranslation(
 		translation_id    = translation.translation_code_id,
 		creator_user_id   = user_id,
 		topic_id          = topic_id,
 		parse_mode        = translation.parse_mode,
-		text              = translation.text
+		text              = translation.text,
+		last_edited_by    = user_id,
+		first             = False
 	)
 	
 	db.add(new_translation)

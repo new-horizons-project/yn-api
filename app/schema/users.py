@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from ..db.enums import UserRoles
 
 class UserBase(BaseModel):
-	id: int
+	id: uuid.UUID
 	username: str
 	role: str
 	is_disabled: bool

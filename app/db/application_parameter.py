@@ -1,4 +1,3 @@
-
 from typing import Optional
 import uuid
 
@@ -67,7 +66,7 @@ async def get_application_parameter_with_value_by_id(db: AsyncSession, ap_id: uu
 	return result.first()
 
 
-async def user_get_application_parameter(db: AsyncSession, name: str, user_id: Optional[int] = None) -> ApplicationParameterValue | None:
+async def user_get_application_parameter(db: AsyncSession, name: str, user_id: Optional[uuid.UUID] = None) -> ApplicationParameterValue | None:
 	result = await get_application_parameter_with_value(db, name)
 	
 	if not result:
@@ -84,11 +83,7 @@ async def user_get_application_parameter(db: AsyncSession, name: str, user_id: O
 		if not user:
 			return None
 		
-		if application_parameter.visibility == enums.AP_visibility.protected:
-			if user.role not in [enums.UserRoles.moderator, enums.UserRoles.admin]:
-				return None
-			
-		if application_parameter.visibility == enums.AP_visibility.private:
+		if application_parameter.visibility in [enums.AP_visibility.system, enums.AP_visibility.private]:
 			if user.role != enums.UserRoles.admin:
 				return None
 				

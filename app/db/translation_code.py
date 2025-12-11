@@ -29,7 +29,7 @@ async def create_translation_code(db: AsyncSession, translation: tc.TranslationC
 		translation_code = translation.translation_code,
 		full_name = translation.full_name
 	).on_conflict_do_nothing(
-		index_elements="translation_code"
+    	index_elements=[schema.Translation.translation_code]
 	).returning(schema.Translation.id)
 	
 	result = await db.execute(query)
