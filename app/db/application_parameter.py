@@ -82,7 +82,7 @@ async def user_get_application_parameter(db: AsyncSession, name: str, user_id: O
 		
 		if not user:
 			return None
-			
+		
 		if application_parameter.visibility in [enums.AP_visibility.system, enums.AP_visibility.private]:
 			if user.role != enums.UserRoles.admin:
 				return None

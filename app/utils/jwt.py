@@ -1,6 +1,7 @@
 import uuid
+from typing import Optional
 
-from fastapi import HTTPException, Request, Depends
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from ..db.users import get_user_by_id
 from .security import decode_token
 
 security = HTTPBearer()
+security_no_autoerror = HTTPBearer(auto_error=False)
 
 def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 	async def wrapper(credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -42,8 +44,7 @@ def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
 	return wrapper
 
 
-async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
-	token = credentials.credentials
+def extract_user_id(token: str):
 	payload = decode_token(token)
 	user_id = payload.get("sub")
 
@@ -51,3 +52,11 @@ async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depend
 		raise HTTPException(status_code=401, detail="Invalid token payload")
 
 	return uuid.UUID(user_id)
+
+
+async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> uuid.UUID:
+	return extract_user_id(credentials.credentials)
+	
+
+async def jwt_extract_user_id_or_none(credentials: HTTPAuthorizationCredentials = Depends(security_no_autoerror)) -> Optional[uuid.UUID]:
+	return None if credentials is None else extract_user_id(credentials.credentials)
