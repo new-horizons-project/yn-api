@@ -13,7 +13,7 @@ class AccessToken(BaseModel):
 
 class JWTUserToken(BaseModel):
 	id             : uuid.UUID
-	user_id        : int
+	user_id        : uuid.UUID
 	device_name    : str
 	on_creation_ip : str
 	is_revoked     : bool

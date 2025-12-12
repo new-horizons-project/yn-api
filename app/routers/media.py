@@ -57,7 +57,7 @@ async def get_media_information(media_id: int, db: AsyncSession = Depends(get_se
 @router.get("/{media_id}/related_objects", dependencies=[Depends(jwt_auth_check_permission([UserRoles.admin]))],
 			response_model=RelatedObjects)
 async def get_related_objects(media_id: int, db: AsyncSession = Depends(get_session)):
-	obj = await media_db.get_media_by_id(media_id, db, True)
+	obj = await media_db.get_media_by_id(db, media_id, True)
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")

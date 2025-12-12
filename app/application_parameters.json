@@ -1,0 +1,22 @@
+{
+	"application" : {
+		"system" : {
+			"root_user" : {
+				"parameter" : 1,
+				"type" : "uuid",
+				"kind" : "gap",
+				"default_value" : "",
+				"visibility" : "system"
+			}
+		},
+		"ui" : {
+			"logo_media_id" : {
+				"parameter" : 1,
+				"type" : "integer",
+				"kind" : "gap",
+				"default_value" : "",
+				"visibility" : "public"
+			}
+		}
+	}
+}

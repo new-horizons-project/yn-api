@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Depends, APIRouter, HTTPException, Body, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -33,7 +35,7 @@ async def create_user(user: users.UserCreateRequest, db: AsyncSession = Depends(
 
 
 @router.put("/user/{user_id}/deactivate", tags=["Admin User"], response_model=users.UserBase)
-async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
+async def deactivate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
 	try:
 		user = await udbfunc.change_user_availability(db, user_id, True)
 	except udbfunc.RootUserException:
@@ -46,7 +48,7 @@ async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_session))
 
 
 @router.put("/user/{user_id}/reactivate", tags=["Admin User"], response_model=users.UserBase)
-async def reactivate_user(user_id: int, db: AsyncSession = Depends(get_session)):
+async def reactivate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
 	try:	
 		user = await udbfunc.change_user_availability(db, user_id, False)
 	except udbfunc.RootUserException:
@@ -59,7 +61,7 @@ async def reactivate_user(user_id: int, db: AsyncSession = Depends(get_session))
 
 
 @router.patch("/user/{user_id}/reset_password", tags=["Admin User"])
-async def reset_user_password(user_id: int, 
+async def reset_user_password(user_id: uuid.UUID, 
 							  user_must_change_password: Annotated[bool, Query()], 
 							  req: Annotated[users.ResetPasswordRequest, Body()], 
 							  db: AsyncSession = Depends(get_session)):
@@ -83,7 +85,7 @@ async def reset_user_password(user_id: int,
 
 
 @router.delete("/user/{user_id}/delete", tags=["Admin User"])
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
+async def delete_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
 	try:
 		success = await udbfunc.delete_user(db, user_id)
 	except udbfunc.RootUserException:
@@ -96,7 +98,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
 
 
 @router.patch("/user/{user_id}/change_role", tags=["Admin User"], response_model=users.UserBase)
-async def change_user_role(user_id: int, new_role: Annotated[UserRoles, Query()],
+async def change_user_role(user_id: uuid.UUID, new_role: Annotated[UserRoles, Query()],
 						   db: AsyncSession = Depends(get_session)):
 	try:
 		user = await udbfunc.update_role(db, user_id, new_role)

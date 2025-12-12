@@ -44,7 +44,7 @@ async def edit_tag(tag_id: int, req: tag.EditTagRequst, db: AsyncSession = Depen
 		tag.name = req.name
 
 	if req.description:
-		tag.description = tag.description
+		tag.description = req.description
 
 	await db.commit()
 	return {"detail": "Tag edit successfully"}

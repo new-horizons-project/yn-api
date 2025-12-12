@@ -72,8 +72,24 @@ async def get_topic_translation_alone(topic_id: int, translation_id: int, db: As
 	
 	return result
 
+async def topic_exists(topic_id: int, db: AsyncSession) -> bool:
+	return await db.scalar(
+		select(
+			exists()
+			.where(schema.Topic.id == topic_id)
+		)
+	)
+
 async def get_topic(topic_id: int, db: AsyncSession) -> schema.Topic | None:
 	return await db.get(schema.Topic, topic_id)
+
+async def get_topic_category(topic_id: int, db: AsyncSession) -> schema.Category:
+	return await db.scalar(
+		select(schema.Category)
+		.select_from(schema.Topic)
+		.join(schema.Category, schema.Topic.category_id == schema.Category.id)
+		.where(schema.Topic.id == topic_id)
+	)
 
 async def get_translation_codes(db: AsyncSession) -> list[schema.Translation]:
 	result = await db.scalars(select(schema.Translation))
@@ -84,19 +100,14 @@ async def get_translation_code_by_id(translation_code_id: int, db: AsyncSession)
 
 	return result
 
-async def create_topic(db: AsyncSession, topic: TopicCreateRequst, user_id) -> int | None:
-	translation_code = await get_translation_code_by_id(topic.translation_id, db)
-
-	if not translation_code:
-		return None
-
+async def create_topic(db: AsyncSession, topic: TopicCreateRequst, user_id) -> int:
 	new_topic = schema.Topic(
 		name=topic.name,
 		name_hash=hash_topic_name(topic.name),
 		creator_user_id=user_id,
-		image_url=topic.image_url
+		cover_image_id=topic.cover_image_id, 
+		category_id=topic.category_id
 	)
-
 	db.add(new_topic)
 	await db.flush()
 
@@ -106,6 +117,8 @@ async def create_topic(db: AsyncSession, topic: TopicCreateRequst, user_id) -> i
 		creator_user_id=user_id,
 		parse_mode=topic.parse_mode,
 		text=topic.text,
+		last_edited_by=user_id,
+		first=True
 	)
 
 	db.add(new_translation)
