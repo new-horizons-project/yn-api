@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class DisplayMode(str, Enum):
 	standard = "Standard"
 	wiki     = "Wiki"
@@ -31,7 +32,7 @@ class ObjectType(str, Enum):
 	tag                  = "tag"
 	topic_link           = "topic_link"
 	jwt_token            = "jwt_token"
-	
+
 
 class JWT_Type(str, Enum):
 	access  = "access"
@@ -72,3 +73,11 @@ class AP_visibility(str, Enum):
 	public = "public"
 	system = "system"
 	private = "private"
+
+
+class EntityType(str, Enum):
+	topic = "topic"
+	tag = "tag"
+	category = "category"
+	topic_translation = "topic-translation"
+	translation = "translation"
