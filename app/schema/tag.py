@@ -1,22 +1,25 @@
+from typing import Any, Dict
+
 from pydantic import BaseModel, model_validator
 
+
 class TagCreateRequst(BaseModel):
-	name:        str
+	name:		str
 	description: str
 
 class EditTagRequst(BaseModel):
-	name:        str | None
+	name:		str | None
 	description: str | None
 
-	@model_validator(mode="before")
-	def at_least_one(cls, values):
+	@model_validator(mode = "before")
+	def at_least_one(cls, values: Dict[str, Any]) -> Dict[str, Any]:
 		if not values.get("name") and not values.get("description"):
 			raise ValueError("Either 'name' or 'description' must be provided")
 		return values
 
 class TagBase(BaseModel):
-	id:          int
-	name:        str
+	id:		  int
+	name:		str
 	description: str
 
 	class Config:

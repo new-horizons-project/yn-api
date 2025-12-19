@@ -1,12 +1,13 @@
-from fastapi import Depends, APIRouter, HTTPException, Body, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..utils.jwt import jwt_auth_check_permission
-from ..db       import get_session, schema, tag as tag_db
+from ..db import get_session
+from ..db import tag as tag_db
 from ..db.enums import UserRoles
-from ..schema   import tag, topics
+from ..schema import tag, topics
+from ..utils.jwt import jwt_auth_check_permission
 
-router = APIRouter(prefix="/tags", tags=["Tag"], 
+router = APIRouter(prefix="/tags", tags=["Tag"],
 	dependencies=[
 		Depends(jwt_auth_check_permission([UserRoles.admin]))
 	]
@@ -36,28 +37,23 @@ async def create_tag(req: tag.TagCreateRequst, db: AsyncSession = Depends(get_se
 
 @router.put("/{tag_id}")
 async def edit_tag(tag_id: int, req: tag.EditTagRequst, db: AsyncSession = Depends(get_session)):
-	tag = await db.get(schema.Tag, tag_id)
+	tag = await tag_db.get_tag_by_id(db, tag_id)
 	if not tag:
 		raise HTTPException(status_code=404, detail="Tag not found")
 
-	if req.name:
-		tag.name = req.name
+	await tag_db.edit_tag(db, tag_id, tag, req)
 
-	if req.description:
-		tag.description = req.description
-
-	await db.commit()
 	return {"detail": "Tag edit successfully"}
 
 
 @router.delete("/{tag_id}")
 async def delete_tag(tag_id: int, db: AsyncSession = Depends(get_session)):
-	tag = await db.get(schema.Tag, tag_id)
+	tag = await tag_db.get_tag_by_id(db, tag_id)
 	if not tag:
 		raise HTTPException(status_code=404, detail="Tag not found")
 
-	await db.delete(tag)
-	await db.commit()
+	await tag_db.delete_tag(db, tag_id)
+
 	return {"detail": "Tag delete successfully"}
 
 

@@ -1,23 +1,24 @@
 import uuid
+from typing import Annotated
 
-from fastapi    import Depends, APIRouter, HTTPException, Body, Query
-from sqlalchemy	import select, exists, func
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing   import Annotated
-from datetime import datetime, timezone
 
-from ..utils.jwt import jwt_auth_check_permission, jwt_extract_user_id
-from ..utils.security import hash_topic_name
-from ..db       import (
-	get_session, schema, 
-	topic    as topic_db, 
-	tag      as tag_db, 
+from ..db import (
 	category as category_db,
+)
+from ..db import (
+	get_session,
+	schema,
+	media as media_db,
+	tag as tag_db,
+	topic as topic_db,
 	translation_code as tc_db,
-	media as media_db
 )
 from ..db.enums import UserRoles
-from ..schema   import topics, tag, category
+from ..schema import category, tag, topics
+from ..utils.jwt import jwt_auth_check_permission, jwt_extract_user_id
 
 router = APIRouter(prefix="/topic", tags=["Topic"],
 	dependencies=[
@@ -62,14 +63,14 @@ async def search_topics(
 	total = await db.scalar(
 		select(func.count())
 		.select_from(stmt.subquery())
-	)
+	) or 0
 
 	offset = (page - 1) * limit
 	stmt = stmt.offset(offset).limit(limit)
 
 	result = await db.scalars(stmt)
-	paginated_topics = result.all()
 
+	paginated_topics = [topics.TopicBase.model_validate(row) for row in result.all()]
 	return topics.PaginatedTopics(
 		total  = total,
 		topics = paginated_topics,
@@ -77,114 +78,102 @@ async def search_topics(
 
 
 @router.post("/create")
-async def create_topic(topic: topics.TopicCreateRequst, 
-					   user_id = Depends(jwt_extract_user_id),
-					   db: AsyncSession = Depends(get_session)):
+async def create_topic(topic: topics.TopicCreateRequst,
+	user_id: uuid.UUID = Depends(jwt_extract_user_id),
+	db: AsyncSession = Depends(get_session)):
 	if not await category_db.exist_by_id(db, topic.category_id):
 		raise HTTPException(status_code=404, detail="Category not exists")
-	
-	if not await tc_db.translation_exists_by_id(topic.translation_id, db):
+
+	translation_code = await tc_db.get_translation_code_by_id(topic.translation_id, db)
+	if not translation_code:
 		raise HTTPException(status_code=404, detail="Translation not exists")
-	
+
 	if topic.cover_image_id is not None and not await media_db.media_exist(db, topic.cover_image_id):
 		raise HTTPException(status_code=404, detail="Media not exists")
 
-	new_topic_id = await topic_db.create_topic(db, topic, user_id)
+	if await topic_db.topic_exists_by_name(topic.name, db):
+		raise HTTPException(status_code=404, detail="Topic name exists")
+
+	new_topic_id = await topic_db.create_topic(db, topic, user_id, translation_code)
 
 	return {"detail": "Topic created successfully", "topic_id": new_topic_id}
 
 
 @router.put("/{topic_id}/change_name")
-async def change_name(topic_id: int, 
-						req: Annotated[topics.ChangeNameRequst, Body()], 
-						db: AsyncSession = Depends(get_session)):
-	topic = await db.get(schema.Topic, topic_id)
+async def change_name(
+	topic_id: int,
+	req: Annotated[topics.ChangeNameRequst, Body()],
+	db: AsyncSession = Depends(get_session)
+):
+	topic = await topic_db.get_topic(topic_id, db)
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
 
-	topic.name = req.name
-	topic.name_hash = hash_topic_name(req.name)
-	topic.edited_at = datetime.now(timezone.utc)
+	name_hash = await topic_db.change_name(topic_id, topic, req.name, db)
 
-	db.add(topic)
-	await db.commit()
-	await db.refresh(topic)
-	return {"detail": "Topic name changed successfully", "name_hash": topic.name_hash}
+	return {"detail": "Topic name changed successfully", "name_hash": name_hash}
 
 
 @router.post("/{topic_id}/add_translation")
-async def add_translation(topic_id: int, 
-						  translation: topics.TranslationCreateRequst, 
-						  user_id: uuid.UUID = Depends(jwt_extract_user_id),
-						  db: AsyncSession = Depends(get_session)) -> topics.TopicTranslationCreated:
+async def add_translation(
+	topic_id: int,
+	translation: topics.TranslationCreateRequst,
+	user_id: uuid.UUID = Depends(jwt_extract_user_id),
+	db: AsyncSession = Depends(get_session)
+) -> topics.TopicTranslationCreated:
 	topic = await topic_db.get_topic(topic_id, db)
 	if not topic:
 		raise HTTPException(404, "Topic not found")
-	
-	translation_code = await topic_db.get_translation_code_by_id(translation.translation_code_id, db)
+
+	translation_code = await tc_db.get_translation_code_by_id(translation.translation_code_id, db)
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
 
-	new_translation = schema.TopicTranslation(
-		translation_id    = translation.translation_code_id,
-		creator_user_id   = user_id,
-		topic_id          = topic_id,
-		parse_mode        = translation.parse_mode,
-		text              = translation.text,
-		last_edited_by    = user_id,
-		first             = False
-	)
-	
-	db.add(new_translation)
-	await db.commit()
-	await db.refresh(new_translation)
-	return new_translation
+	return await topic_db.add_translation(db, topic_id, user_id, translation, translation_code)
+
 
 
 @router.patch("/{topic_id}/translations/{translation_id}")
-async def edit_translation(topic_id: int,
-						  translation_id: int,
-						  translation: topics.TranslationEditRequest,
-						  db: AsyncSession = Depends(get_session)):
-	translation_req = await topic_db.get_topic_translation_alone(topic_id, translation_id, db)
-
-	if not translation_req:
+async def edit_translation(
+	topic_id: int,
+	translation_id: int,
+	translation_req: topics.TranslationEditRequest,
+	db: AsyncSession = Depends(get_session)
+):
+	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
+	if not translation:
 		raise HTTPException(404, "Translation not found")
 
-	
-	translation_req.image_url    = translation.image_url
-	translation_req.parse_mode   = translation.parse_mode
-	translation_req.text         = translation.text
-	
-	await db.commit()
+	await topic_db.edit_translation(db, topic_id, translation_id, translation, translation_req)
+
 	return {
 		"detail": "Translation edited successfully",
 		"translation": translation_req
 	}
-	
+
 
 @router.delete("/{topic_id}/translations/{translation_id}")
-async def del_translation(topic_id: int, 
-						  translation_id: int, 
-						  db: AsyncSession = Depends(get_session)) -> None:
-	translation = await topic_db.get_topic_translation_alone(topic_id, translation_id, db)
+async def del_translation(
+	topic_id: int,
+	translation_id: int,
+	db: AsyncSession = Depends(get_session)
+):
+	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
 	if not translation:
 		raise HTTPException(status_code=404, detail="Translation not found")
 
-	await db.delete(translation)
-	await db.commit()
+	await topic_db.delete_translation_by_id(topic_id, translation_id, db)
 
 	return {"detail": "Translation deleted successfully"}
 
 
 @router.delete("/{topic_id}")
-async def delete_topic(topic_id: int, db: AsyncSession = Depends(get_session)) -> None:
+async def delete_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 	topic = await topic_db.get_topic(topic_id, db)
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
-	
-	await db.delete(topic)
-	await db.commit()
+
+	await topic_db.delete_by_id(topic_id, db)
 	return {"detail": "Topic deleted successfully"}
 
 
@@ -197,9 +186,11 @@ async def get_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 
 @router_public.get("/{topic_id}/category", response_model=category.CategoryBase)
 async def get_topic_category(topic_id: int, db: AsyncSession = Depends(get_session)) -> category.CategoryBase:
-	if not await topic_db.topic_exists(topic_id, db):
+	topic_category = await topic_db.get_topic_category(topic_id, db)
+	if topic_category is None:
 		raise HTTPException(status_code=404, detail="Topic not found")
-	return await topic_db.get_topic_category(topic_id, db)
+	return topic_category
+
 
 @router_public.get("/{topic_id}/translations", response_model=list[topics.TopicTranslationBase])
 async def get_translations_by_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
@@ -216,13 +207,11 @@ async def get_translation_by_id(topic_id: int, translation_id: int, db: AsyncSes
 
 @router_public.get("/{topic_id}/tags", response_model = list[tag.TagBase])
 async def list_topic_tags(topic_id: int, db: AsyncSession = Depends(get_session)) -> list[tag.TagBase]:
-	result = await db.scalars(
-		select(schema.Tag)
-		.join(schema.TagInTopic, schema.TagInTopic.tag_id == schema.Tag.id)
-		.where(schema.TagInTopic.topic_id == topic_id)
-		.order_by(schema.Tag.name)
-	)
-	return result.all()
+	topic = await topic_db.get_topic(topic_id, db)
+	if topic is None:
+		raise HTTPException(status_code=404, detail="Topic not found")
+
+	return await topic_db.get_list_topic_tags(topic_id, db)
 
 
 @router_public.post("/{topic_id}/tags/{tag_id}")
@@ -239,7 +228,7 @@ async def attach_tag_to_topic(
 
 	if succes:
 		return {"detail": "Tag attached to topic"}
-	
+
 	return {"detail": "Tag already attached"}
 
 
@@ -257,5 +246,5 @@ async def detach_tag_from_topic(
 
 	if succes:
 		return {"detail": "Tag detached from topic"}
-	
+
 	return {"detail": "Tag not attached"}

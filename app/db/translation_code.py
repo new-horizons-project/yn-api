@@ -1,27 +1,35 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, exists
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import schema
+from ..config import settings
+from ..redis.cache import translation_cache
 from ..schema import translation_code as tc
+from ..schema.translation_code import Translation
+from . import schema
 
-async def get_translation_code_list(db: AsyncSession) -> list[schema.Translation]:
+
+async def get_translation_code_list(db: AsyncSession) -> list[tc.Translation]:
 	res = await db.scalars(
 		select(schema.Translation)
 	)
-	return res.all()
+	return [tc.Translation.model_validate(obj) for obj in res.all()]
 
-async def translation_exists_by_id(translation_id: int, db: AsyncSession) -> bool:
-	return await db.scalar(
-		select(
-			exists()
-			.where(schema.Translation.id == translation_id)
-		)
-	)
+async def get_translation_code_by_id(translation_code_id: int, db: AsyncSession) -> Translation | None:
+	count = await translation_cache.incr(translation_code_id)
+	cached = await translation_cache.get(translation_code_id)
+	if cached:
+		return cached
 
-async def get_translation_code_by_id(translation_id: int, db: AsyncSession) -> schema.Translation | None:
-	return await db.get(schema.Translation, translation_id)
+	result = await db.get(schema.Translation, translation_code_id)
+	if result is None:
+		return None
+
+	translation = Translation.model_validate(result)
+	if count >= settings.CACHE_THRESHOLD:
+		await translation_cache.set(translation_code_id, translation)
+
+	return translation
 
 
 async def create_translation_code(db: AsyncSession, translation: tc.TranslationCodeCreateRequest) -> int | None:
@@ -29,9 +37,9 @@ async def create_translation_code(db: AsyncSession, translation: tc.TranslationC
 		translation_code = translation.translation_code,
 		full_name = translation.full_name
 	).on_conflict_do_nothing(
-    	index_elements=[schema.Translation.translation_code]
+		index_elements=[schema.Translation.translation_code]
 	).returning(schema.Translation.id)
-	
+
 	result = await db.execute(query)
 	await db.commit()
 	return result.scalar_one_or_none()
@@ -47,7 +55,7 @@ async def delete_translation_code(db: AsyncSession, translation_id: int) -> bool
             schema.TopicTranslation.translation_id == translation_id
         )
     )
-    
+
     if related is not None:
         return False
 

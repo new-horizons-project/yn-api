@@ -17,7 +17,11 @@ from . import __version__, __release_subname__, config
 
 
 async def init_config(db: AsyncSession):
-    ap_value, _ = await ap.get_application_parameter_with_value(db, "application.system.root_user")
+    result = await ap.get_application_parameter_with_value(db, "application.system.root_user")
+    if result is None:
+        config.system_ap.root_user_id = None
+        return
+    ap_value, _ = result
     config.system_ap.root_user_id = uuid.UUID(ap_value.default_value) if ap_value.default_value is not None else None
 
 

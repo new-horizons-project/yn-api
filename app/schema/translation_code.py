@@ -1,7 +1,10 @@
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, StringConstraints
+from typing_extensions import Annotated
+
+TranslationCode = Annotated[str, StringConstraints(max_length = 2)]
 
 class TranslationCodeCreateRequest(BaseModel):
-	translation_code: constr(max_length=2)
+	translation_code: TranslationCode
 	full_name: str
 
 	class Config:
