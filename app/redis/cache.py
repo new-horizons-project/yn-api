@@ -26,21 +26,27 @@ class RedisEntityCache(Generic[T]):
 		suffix: Optional[str] = None
 	) -> str:
 		base = f"{entity_type.value}:{entity_id}"
+
 		if relation_type is not None:
 			base += f":{relation_type.value}"
 
 		if suffix is not None:
 			base += f":{suffix}"
+
 		return base
+
 
 	def key(self, entity_id: int) -> str:
 		return self._key(self.entity_type, entity_id)
 
+
 	def cascade_key(self, entity_id: int) -> str:
 		return self._key(self.entity_type, entity_id, suffix = "cascade")
 
+
 	def relation_key(self, entity_id: int, related_type: EntityType) -> str:
 		return self._key(self.entity_type, entity_id, related_type)
+
 
 	def back_relation_key(self, entity_id: int) -> str:
 		return self._key(self.entity_type, entity_id, suffix = "back-relation")
@@ -53,11 +59,15 @@ class RedisEntityCache(Generic[T]):
 	async def set(self, entity_id: int, obj: T) -> None:
 		await redis.hset(self.key(entity_id), mapping = obj.model_dump(mode = "json"))
 
+
 	async def get(self, entity_id: int) -> Optional[T]:
 		raw = await redis.hgetall(self.key(entity_id))
+
 		if not raw:
 			return None
+		
 		return self.model.model_validate(raw)
+
 
 	async def incr(self, entity_id: int, relation_type: Optional[EntityType] = None) -> int:
 		return await redis.incr(self._key(self.entity_type, entity_id, relation_type, "count"))
@@ -70,12 +80,14 @@ class RedisEntityCache(Generic[T]):
 	) -> None:
 		await redis.sadd(self.cascade_key(entity_id), self._key(related_type, related_id))
 
+
 	async def add_relation(self,
 		entity_id: int,
 		related_type: EntityType,
 		related_id: int
 	) -> None:
 		await redis.sadd(self.relation_key(entity_id, related_type), self._key(related_type, related_id))
+
 
 	async def add_back_relation(self,
 		entity_id: int,
@@ -88,8 +100,10 @@ class RedisEntityCache(Generic[T]):
 	async def get_relations(self, entity_id: int, related_type: EntityType) -> list[Any]:
 		relation_keys = await redis.smembers(self.relation_key(entity_id, related_type))
 		pipe = redis.pipeline()
+
 		for relation_key in relation_keys:
 			pipe.hgetall(relation_key)
+
 		return await pipe.execute()
 
 
@@ -101,12 +115,15 @@ class RedisEntityCache(Generic[T]):
 		await redis.delete(name, *cascade, cascade_name)
 
 		back_relation = await redis.smembers(self.back_relation_key(entity_id))
+
 		for i in back_relation:
 			back_name = f"{i}:{self.entity_type.value}"
 			await redis.srem(back_name, cascade_name)
 
+
 	async def delete_relation(self, entity_id: int, related_type: EntityType, related_id: int) -> None:
 		await redis.srem(self.relation_key(entity_id, related_type), self._key(related_type, related_id))
+
 
 	async def delete_back_relation(self, entity_id: int, related_type: EntityType, related_id: int) -> None:
 		await redis.srem(self.back_relation_key(entity_id), self._key(related_type, related_id))
