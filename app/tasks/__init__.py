@@ -7,7 +7,6 @@ from .worker import celery
 scheduler = AsyncIOScheduler()
 
 async def celery_send_task(task_id: int, task_name: str):
-	print(f"Sending task {task_name}...")
 	session_generator = get_session()
 	session = await anext(session_generator)
 
@@ -28,7 +27,7 @@ async def schedule_tasks(db: AsyncSession):
 				"interval",
 				seconds=task.interval,
 				args=[task.id, task.task_name],
-				id=task.task_name,
+				id=str(task.id),
 				replace_existing=True,
 			)
 

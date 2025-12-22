@@ -22,6 +22,15 @@ async def get_task_by_name(db: AsyncSession, task_name: str) -> Optional[schema.
 	return result.scalar_one_or_none()
 
 
+async def get_task_by_id(db: AsyncSession, task_id: int) -> Optional[schema.SchedulableTask]:
+	result = await db.execute(
+		select(schema.SchedulableTask)
+		.where(schema.SchedulableTask.id == task_id)
+	)
+
+	return result.scalar_one_or_none()
+
+
 async def update_task_last_execution(db: AsyncSession, task_id: int) -> None:
 	await db.execute(
 		schema.SchedulableTask.__table__.update()
@@ -44,13 +53,10 @@ async def change_task_state(db: AsyncSession, task_id: int, enable: bool) -> Non
 
 async def init_tasks(db: AsyncSession):
 	tasks_list = {
-		"tasks.check": {
-			"pretty_name": "Check Task",
-			"interval": 60,
-			"enabled": True
-		},
+		
 	}
 
+	
 	for name, info in tasks_list.items():
 		task = await get_task_by_name(db, name)
 
