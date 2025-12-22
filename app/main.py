@@ -12,7 +12,8 @@ from colorama import Fore, Style
 from user_agents import parse
 
 from .routers import *
-from .db import init_db, get_session, users, topic, media, application_parameter as ap
+from .db import init_db, get_session, users, topic, media, application_parameter as ap, tasks
+from .tasks import schedule_tasks
 from . import __version__, __release_subname__, config
 
 
@@ -55,6 +56,8 @@ async def lifespan(app: FastAPI):
         await users.create_root_user(session)
         await topic.create_base_translation(session)
         await media.init_media(session)
+        await tasks.init_tasks(session)
+        await schedule_tasks(session)
         yield
     finally:
         await session.close()
