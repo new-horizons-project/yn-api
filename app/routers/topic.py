@@ -38,7 +38,7 @@ async def search_topics(
 	order:  str = Query("asc",   pattern="^(asc|desc)$"),
 	db: AsyncSession = Depends(get_session)
 ) -> topics.PaginatedTopics:
-	stmt = select(schema.Topic)
+	stmt = select(schema.Topic).where(schema.Topic.translations.any())
 	if search:
 		stmt = stmt.where(schema.Topic.name.ilike(f"%{search}%"))
 
@@ -56,6 +56,7 @@ async def search_topics(
 			)
 
 	sort_column = schema.Topic.name if sort == "title" else schema.Topic.created_at
+
 	if order == "desc":
 		sort_column = sort_column.desc()
 	stmt = stmt.order_by(sort_column)
@@ -84,17 +85,13 @@ async def create_topic(topic: topics.TopicCreateRequst,
 	if not await category_db.exist_by_id(db, topic.category_id):
 		raise HTTPException(status_code=404, detail="Category not exists")
 
-	translation_code = await tc_db.get_translation_code_by_id(topic.translation_id, db)
-	if not translation_code:
-		raise HTTPException(status_code=404, detail="Translation not exists")
-
 	if topic.cover_image_id is not None and not await media_db.media_exist(db, topic.cover_image_id):
 		raise HTTPException(status_code=404, detail="Media not exists")
 
 	if await topic_db.topic_exists_by_name(topic.name, db):
 		raise HTTPException(status_code=404, detail="Topic name exists")
 
-	new_topic_id = await topic_db.create_topic(db, topic, user_id, translation_code)
+	new_topic_id = await topic_db.create_topic(db, topic, user_id)
 
 	return {"detail": "Topic created successfully", "topic_id": new_topic_id}
 
@@ -106,6 +103,7 @@ async def change_name(
 	db: AsyncSession = Depends(get_session)
 ):
 	topic = await topic_db.get_topic(topic_id, db)
+
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
 
@@ -122,15 +120,16 @@ async def add_translation(
 	db: AsyncSession = Depends(get_session)
 ) -> topics.TopicTranslationCreated:
 	topic = await topic_db.get_topic(topic_id, db)
+
 	if not topic:
 		raise HTTPException(404, "Topic not found")
 
 	translation_code = await tc_db.get_translation_code_by_id(translation.translation_code_id, db)
+	
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
 
 	return await topic_db.add_translation(db, topic_id, user_id, translation, translation_code)
-
 
 
 @router.patch("/{topic_id}/translations/{translation_id}")
@@ -138,13 +137,15 @@ async def edit_translation(
 	topic_id: int,
 	translation_id: int,
 	translation_req: topics.TranslationEditRequest,
-	db: AsyncSession = Depends(get_session)
+	db: AsyncSession = Depends(get_session),
+	user_id = Depends(jwt_extract_user_id)
 ):
 	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
+
 	if not translation:
 		raise HTTPException(404, "Translation not found")
 
-	await topic_db.edit_translation(db, topic_id, translation_id, translation, translation_req)
+	await topic_db.edit_translation(db, topic_id, translation_id, translation, translation_req, user_id)
 
 	return {
 		"detail": "Translation edited successfully",
@@ -159,10 +160,14 @@ async def del_translation(
 	db: AsyncSession = Depends(get_session)
 ):
 	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
+
 	if not translation:
 		raise HTTPException(status_code=404, detail="Translation not found")
 
-	await topic_db.delete_translation_by_id(topic_id, translation_id, db)
+	result: bool = await topic_db.delete_translation_by_id(topic_id, translation_id, db)
+
+	if not result:
+		raise HTTPException(status_code=409, detail="Can't delete original text")
 
 	return {"detail": "Translation deleted successfully"}
 
@@ -170,6 +175,7 @@ async def del_translation(
 @router.delete("/{topic_id}")
 async def delete_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 	topic = await topic_db.get_topic(topic_id, db)
+	
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
 
@@ -184,11 +190,14 @@ async def get_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 		raise HTTPException(status_code=404, detail="Topic not found")
 	return topic
 
+
 @router_public.get("/{topic_id}/category", response_model=category.CategoryBase)
 async def get_topic_category(topic_id: int, db: AsyncSession = Depends(get_session)) -> category.CategoryBase:
 	topic_category = await topic_db.get_topic_category(topic_id, db)
+
 	if topic_category is None:
 		raise HTTPException(status_code=404, detail="Topic not found")
+	
 	return topic_category
 
 
@@ -200,8 +209,10 @@ async def get_translations_by_topic(topic_id: int, db: AsyncSession = Depends(ge
 @router_public.get("/{topic_id}/translations/{translation_id}", response_model=topics.TopicTranslationBase)
 async def get_translation_by_id(topic_id: int, translation_id: int, db: AsyncSession = Depends(get_session)):
 	translations = await topic_db.get_topic_translations(topic_id, translation_id, db)
+
 	if not translations:
 		raise HTTPException(status_code=404, detail="Translations not found")
+	
 	return translations
 
 
@@ -248,3 +259,8 @@ async def detach_tag_from_topic(
 		return {"detail": "Tag detached from topic"}
 
 	return {"detail": "Tag not attached"}
+
+
+@router.get("/headless", response_model=list[topics.TopicBase])
+async def get_headless_topics(db: AsyncSession = Depends(get_session)):
+	return await topic_db.get_headless_topics(db)
