@@ -2,7 +2,7 @@ from typing import Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import schema
@@ -33,7 +33,7 @@ async def get_task_by_id(db: AsyncSession, task_id: int) -> Optional[schema.Sche
 
 async def update_task_last_execution(db: AsyncSession, task_id: int) -> None:
 	await db.execute(
-		schema.SchedulableTask.__table__.update()
+		update(schema.SchedulableTask)
 		.where(schema.SchedulableTask.id == task_id)
 		.values(last_execution=datetime.now(tz=ZoneInfo(config.settings.CELERY_TIMEZONE)))
 	)
@@ -43,7 +43,7 @@ async def update_task_last_execution(db: AsyncSession, task_id: int) -> None:
 
 async def change_task_state(db: AsyncSession, task_id: int, enable: bool) -> None:
 	await db.execute(
-		schema.SchedulableTask.__table__.update()
+		update(schema.SchedulableTask)
 		.where(schema.SchedulableTask.id == task_id)
 		.values(enabled=enable)
 	)
