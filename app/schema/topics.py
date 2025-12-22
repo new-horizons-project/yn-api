@@ -1,10 +1,11 @@
-from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
-from typing import Optional
-from datetime import datetime
+from pydantic import BaseModel
 
 from ..db.enums import ParseMode
+
 
 class TopicBase(BaseModel):
 	id: int
@@ -28,7 +29,7 @@ class Translation(BaseModel):
 
 class TopicTranslationBase(BaseModel):
 	id:               int
-	translation_code: str 
+	translation_code: str
 	topic_id:         int
 	parse_mode:       ParseMode
 	text:             str
@@ -59,12 +60,10 @@ class ChangeNameRequst(BaseModel):
 
 class TranslationCreateRequst(BaseModel):
 	translation_code_id: int
-	image_url:       Optional[str]
 	parse_mode:      ParseMode
 	text:            str
 
 class TranslationEditRequest(BaseModel):
-	image_url:       Optional[str]
 	parse_mode:      ParseMode
 	text:            str
 

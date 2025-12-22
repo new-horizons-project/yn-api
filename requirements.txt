@@ -13,3 +13,4 @@ user-agents
 pillow
 celery[redis]
 apscheduler
+redis

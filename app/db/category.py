@@ -1,8 +1,9 @@
-from sqlalchemy import select, update, exists
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import schema
+from ..redis.cache import category_cache
 from ..schema.category import CategoryCreateRequst, CategoryUpdateRequst
+from . import schema
 
 
 async def create(db: AsyncSession, category: CategoryCreateRequst) -> int:
@@ -18,7 +19,7 @@ async def create(db: AsyncSession, category: CategoryCreateRequst) -> int:
 
 	return new_category.id
 
-async def exist_by_name(db: AsyncSession, name: str) -> bool:
+async def exist_by_name(db: AsyncSession, name: str) -> bool | None:
 	return await db.scalar(
 		select(
 			exists()
@@ -26,7 +27,7 @@ async def exist_by_name(db: AsyncSession, name: str) -> bool:
 		)
 	)
 
-async def exist_by_id(db: AsyncSession, category_id: int) -> bool:
+async def exist_by_id(db: AsyncSession, category_id: int) -> bool | None:
 	return await db.scalar(
 		select(
 			exists()
@@ -34,7 +35,7 @@ async def exist_by_id(db: AsyncSession, category_id: int) -> bool:
 		)
 	)
 
-async def category_topic_exist(db: AsyncSession, category_id: int) -> bool:
+async def category_topic_exist(db: AsyncSession, category_id: int) -> bool | None:
 	return await db.scalar(
 		select(
 			exists()
@@ -51,7 +52,7 @@ async def update_category(db: AsyncSession, category_id: int, category: Category
 		kw["display_mode"] = category.display_mode
 
 	if not kw:
-		return
+		return False
 
 	result = await db.execute(
 		update(schema.Category)
@@ -61,3 +62,11 @@ async def update_category(db: AsyncSession, category_id: int, category: Category
 	await db.commit()
 
 	return result.rowcount > 0
+
+async def delete_by_id(db: AsyncSession, category_id: int) -> None:
+	await db.execute(
+		delete(schema.Category)
+		.where(schema.Category.id == category_id)
+	)
+	await db.commit()
+	await category_cache.delete(category_id)
