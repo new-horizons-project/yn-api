@@ -237,6 +237,43 @@ async def add_translation(
 	return topics.TopicTranslationCreated.model_validate(new_translation)
 
 
+
+async def add_translation(
+	db: AsyncSession,
+	topic_id: int,
+	user_id: uuid.UUID,
+	translation: TranslationCreateRequst,
+	translation_code: Translation
+) -> TopicTranslationCreated:
+	new_translation = schema.TopicTranslation(
+		translation_id    = translation.translation_code_id,
+		creator_user_id   = user_id,
+		topic_id          = topic_id,
+		parse_mode        = translation.parse_mode,
+		text              = translation.text,
+		last_edited_by    = user_id,
+		first             = False
+	)
+
+	db.add(new_translation)
+	await db.commit()
+	await db.refresh(new_translation)
+
+	if await topic_cache.exist(topic_id):
+		topic_translation = TopicTranslationBase(
+			id=new_translation.id,
+			topic_id=topic_id,
+			parse_mode=new_translation.parse_mode,
+			text=new_translation.text,
+			translation_code=translation_code.translation_code,
+			full_name=translation_code.full_name,
+		)
+		await topic_translation_cache.set(new_translation.id, topic_translation)
+		await topic_cache.add_relation(topic_id, EntityType.topic_translation, new_translation.id)
+
+	return topics.TopicTranslationCreated.model_validate(new_translation)
+
+
 async def create_base_translation(db: AsyncSession) -> None:
 	if await db.scalar(
 		select(exists().select_from(schema.Translation))
