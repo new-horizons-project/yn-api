@@ -193,7 +193,7 @@ class AuditEffectedObject(Base):
 class MediaObject(Base):
 	__tablename__ = "media_object"
 
-	id                     : Mapped[int] = mapped_column(primary_key=True)
+	id                     : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	obj_type               : Mapped[MediaType] = mapped_column(SqlEnum(MediaType, native_enum=False), nullable=False)
 	file_path              : Mapped[str] = mapped_column(String(500), nullable=False)
 	uploaded_at            : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
@@ -242,3 +242,14 @@ class APValue(Base):
 	)
 	
 	parameter: Mapped["ApplicationParameter"] = relationship(back_populates="value")
+
+
+class SchedulableTask(Base):
+	__tablename__ = "schedulable_task"
+
+	id             : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	pretty_name    : Mapped[str] = mapped_column(Text, nullable=False)
+	task_name      : Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+	interval       : Mapped[int] = mapped_column(Integer, nullable=False)
+	enabled        : Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+	last_execution : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

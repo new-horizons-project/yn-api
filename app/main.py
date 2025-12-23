@@ -12,8 +12,8 @@ from colorama import Fore, Style
 from user_agents import parse
 
 from .routers import *
-from .db import init_db, get_session, users, topic, media, application_parameter as ap
-from . import __version__, __release_subname__, config
+from .db import init_db, get_session, users, topic, media, application_parameter as ap, tasks as tasks_db
+from . import __version__, __release_subname__, config, tasks
 
 
 async def init_config(db: AsyncSession):
@@ -54,12 +54,16 @@ async def lifespan(app: FastAPI):
 	session_generator = get_session()
 	session = await anext(session_generator)
 
+	await init_config(session)
+
 	try:
 		await ap.init_ap(session)
 		await init_config(session)
 		await users.create_root_user(session)
 		await topic.create_base_translation(session)
 		await media.init_media(session)
+		await tasks_db.init_tasks(session)
+		await tasks.schedule_tasks(session)
 		yield
 	finally:
 		await session.close()
@@ -69,20 +73,7 @@ app = FastAPI(title=config.settings.APP_NAME, version=__version__, lifespan=life
 
 
 @app.get("/")
-def ping(request: Request):
-    user_agent = parse(request.headers.get("user-agent", "unknown"))
-
-    if user_agent.is_mobile:
-        device_type = "mobile"
-    elif user_agent.is_tablet:
-        device_type = "tablet"
-    elif user_agent.is_pc:
-        device_type = "pc"
-    elif user_agent.is_bot:
-        device_type = "bot"
-    else:
-        device_type = "unknown"
-
+def ping():
     info = {
         "app_name": config.settings.APP_NAME,
         "api_version": __version__,

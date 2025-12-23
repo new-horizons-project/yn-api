@@ -11,4 +11,6 @@ alembic
 psycopg2
 user-agents
 pillow
+celery[redis]
+apscheduler
 redis

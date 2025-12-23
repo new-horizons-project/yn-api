@@ -38,6 +38,11 @@ class Config(BaseSettings):
 	# CORS
 	FRONTEND_URL: str
 
+	# Task Scheduler
+	CELERY_BROKER_URL: str
+	CELERY_BACKEND_URL: str
+	CELERY_TIMEZONE: str = "UTC"
+    
 	# Redis configuration
 	REDIS_HOST: str
 	REDIS_PORT: int
