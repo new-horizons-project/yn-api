@@ -1,4 +1,12 @@
 services:
+  migrate:
+    build: .
+    command: alembic -c /api/alembic.ini upgrade head
+    env_file:
+      - .env
+    depends_on:
+      - db
+
   newhorizons_api:
     build: .
     container_name: new_horizons_api
@@ -6,6 +14,8 @@ services:
       - .env
     depends_on:
       - db
+      - redis
+      - migrate
     ports:
       - "9002:9002"
     restart: unless-stopped
@@ -19,8 +29,24 @@ services:
       POSTGRES_DB: newhorizons
     ports:
       - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: new_horizons_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    container_name: new_horizons_celery
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A app.tasks worker --loglevel=info
     restart: unless-stopped
 
 volumes:

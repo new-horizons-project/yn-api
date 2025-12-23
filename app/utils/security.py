@@ -4,25 +4,28 @@ import uuid
 import string
 
 import jwt
+import bcrypt
 import hashlib
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
-from passlib.context import CryptContext
 
 from ..db.jwt import check_jwt_token
 from ..db.enums import JWT_Type
 from ..config import settings 
 
-passwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-	return passwd_context.hash(password)
+	pass_utf8 = password.encode('utf-8')[:72]
+	hashed = bcrypt.hashpw(pass_utf8, bcrypt.gensalt())
+	return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-	return passwd_context.verify(plain_password, hashed_password)
+	pass_utf8 = plain_password.encode('utf-8')[:72]
+	hashed_utf8 = hashed_password.encode('utf-8')
+	return bcrypt.checkpw(pass_utf8, hashed_utf8)
 
 
 def check_password_strength(password: str) -> bool:
