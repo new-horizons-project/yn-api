@@ -49,11 +49,8 @@ class TopicTranslationCreated(BaseModel):
 
 class TopicCreateRequst(BaseModel):
 	name:            str
-	translation_id:  int
 	category_id:     int
 	cover_image_id:  Optional[int]
-	parse_mode:      ParseMode
-	text:            str
 
 class ChangeNameRequst(BaseModel):
 	name: str

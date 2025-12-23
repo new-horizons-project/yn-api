@@ -1,6 +1,8 @@
 import uuid
+from typing import Optional
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
 from sqlalchemy import delete, exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,10 +51,13 @@ async def get_topic(topic_id: int, db: AsyncSession) -> topics.TopicBase | None:
 
 async def get_topic_category(topic_id: int, db: AsyncSession) -> category.CategoryBase | None:
 	count = await category_cache.incr(topic_id)
+
 	if count >= settings.CACHE_THRESHOLD:
 		topic_cached = await topic_cache.get(topic_id)
+
 		if topic_cached is not None:
 			cached = await category_cache.get(topic_cached.category_id)
+
 			if cached is not None:
 				return cached
 
@@ -62,8 +67,10 @@ async def get_topic_category(topic_id: int, db: AsyncSession) -> category.Catego
 		.join(schema.Category, schema.Topic.category_id == schema.Category.id)
 		.where(schema.Topic.id == topic_id)
 	)
+
 	if result is None:
 		return None
+	
 	topic_category = category.CategoryBase.model_validate(result)
 
 	if count >= settings.CACHE_THRESHOLD:
@@ -174,7 +181,6 @@ async def create_topic(
 	db: AsyncSession,
 	topic: TopicCreateRequst,
 	user_id: uuid.UUID,
-	translation_code: Translation
 ) -> int:
 	new_topic = schema.Topic(
 		name=topic.name,
@@ -183,37 +189,53 @@ async def create_topic(
 		cover_image_id=topic.cover_image_id,
 		category_id=topic.category_id
 	)
+
 	db.add(new_topic)
 	await db.flush()
 
+	await db.commit()
+	await db.refresh(new_topic)
+
+	return new_topic.id
+
+
+async def add_translation(
+	db: AsyncSession,
+	topic_id: int,
+	user_id: uuid.UUID,
+	translation: TranslationCreateRequst,
+	translation_code: Translation
+) -> TopicTranslationCreated:
 	new_translation = schema.TopicTranslation(
-		translation_id=topic.translation_id,
-		topic_id=new_topic.id,
-		creator_user_id=user_id,
-		parse_mode=topic.parse_mode,
-		text=topic.text,
-		last_edited_by=user_id,
-		first=True
+		translation_id    = translation.translation_code_id,
+		creator_user_id   = user_id,
+		topic_id          = topic_id,
+		parse_mode        = translation.parse_mode,
+		text              = translation.text,
+		last_edited_by    = user_id
 	)
+
+	has_translation: bool = await db.scalar(select(exists().where(schema.TopicTranslation.topic_id == topic_id)))
+	new_translation.first = not has_translation
 
 	db.add(new_translation)
 	await db.commit()
-	await db.refresh(new_topic)
 	await db.refresh(new_translation)
 
-	if await topic_cache.exist(new_topic.id):
+	if await topic_cache.exist(topic_id):
 		topic_translation = TopicTranslationBase(
 			id=new_translation.id,
-			topic_id=new_topic.id,
+			topic_id=topic_id,
 			parse_mode=new_translation.parse_mode,
 			text=new_translation.text,
 			translation_code=translation_code.translation_code,
 			full_name=translation_code.full_name,
 		)
 		await topic_translation_cache.set(new_translation.id, topic_translation)
-		await topic_cache.add_relation(new_topic.id, EntityType.topic_translation, new_translation.id)
+		await topic_cache.add_relation(topic_id, EntityType.topic_translation, new_translation.id)
 
-	return new_topic.id
+	return topics.TopicTranslationCreated.model_validate(new_translation)
+
 
 
 async def add_translation(
@@ -298,7 +320,29 @@ async def edit_translation(
 	translation_id: int,
 	translation: topics.TopicTranslationBase,
 	translation_req: TranslationEditRequest,
+	user_id: uuid.UUID
 ) -> None:
+	result = await db.execute(
+		select(
+			schema.TopicTranslation.first,
+			schema.Topic.imported
+		).join(
+			schema.Topic,
+			schema.Topic.id == schema.TopicTranslation.topic_id
+		).where(
+			schema.TopicTranslation.topic_id == topic_id,
+			schema.TopicTranslation.id == translation_id
+		).limit(1) 
+	)
+
+	row = result.first()
+
+	if not row:
+		return None
+	
+	if row.imported and row.first:
+		raise HTTPException(409, "Editing not allowed")
+
 	await db.execute(
 		update(schema.TopicTranslation)
 		.where(
@@ -307,7 +351,8 @@ async def edit_translation(
 		)
 		.values(
 			parse_mode = translation_req.parse_mode,
-			text = translation_req.text
+			text = translation_req.text,
+			last_edited_by = user_id
 		)
 	)
 	await db.commit()
@@ -328,7 +373,17 @@ async def delete_by_id(topic_id: int, db: AsyncSession) -> None:
 	await topic_cache.delete(topic_id)
 
 
-async def delete_translation_by_id(topic_id: int, translation_id: int, db: AsyncSession) -> bool | None:
+async def delete_translation_by_id(topic_id: int, translation_id: int, db: AsyncSession) -> bool:
+	is_first: bool = await db.scalar(
+		select(schema.TopicTranslation.first)
+			.where(
+				schema.TopicTranslation.id == translation_id,
+				schema.TopicTranslation.topic_id == topic_id
+			)
+		)
+	
+	if is_first: return False
+
 	await db.execute(
 		delete(schema.TopicTranslation)
 		.where(
@@ -336,4 +391,17 @@ async def delete_translation_by_id(topic_id: int, translation_id: int, db: Async
 			schema.TopicTranslation.id == translation_id
 		)
 	)
+	await db.commit()
+
 	await topic_translation_cache.delete(translation_id)
+	return True
+
+
+async def get_headless_topics(db: AsyncSession) -> Optional[list[schema.Topic]]:
+	topics = await db.execute(select(
+		schema.Topic).where(
+			~schema.Topic.translations.any()
+		)
+	)
+
+	return topics.scalars().all()
