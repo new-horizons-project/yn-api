@@ -6,10 +6,11 @@ from typing import Annotated
 
 from ..utils.security import check_password_strength
 from ..utils.jwt import jwt_auth_check_permission
-from ..db import users as udbfunc, get_session, jwt as jwtdb
+from ..db import users as udbfunc, get_session, jwt as jwtdb, tasks as tasks_db
 from ..config import settings
-from ..schema import users, token
+from ..schema import users, token, tasks
 from ..db.enums import UserRoles
+from ..tasks import scheduler, celery_send_task
 
 router = APIRouter(prefix="/admin", 
 	dependencies=[
@@ -124,3 +125,58 @@ async def revoke_jwt(token_id: str, db: AsyncSession = Depends(get_session)):
 		raise HTTPException(status_code=404, detail="Token not found")
 	
 	return {"detail": "Token revoked successfully"}
+
+
+@router.get("/task", response_model=list[tasks.Task], tags=["Admin Tasks"])
+async def get_tasks_list(db: AsyncSession = Depends(get_session)):
+	return await tasks_db.get_tasks(db)
+
+
+@router.get("/task/{task_id}", response_model=tasks.Task, tags=["Admin Tasks"])
+async def get_task(task_id: int, db: AsyncSession = Depends(get_session)):
+	task = await tasks_db.get_task_by_id(db, task_id)
+
+	if not task:
+		raise HTTPException(status_code=404, detail="Task not found")
+	
+	return task
+
+
+@router.patch("/task/{task_id}/change_state", response_model=dict, tags=["Admin Tasks"])
+async def change_task_state(task_id: int, enable: Annotated[bool, Query()],
+						    db: AsyncSession = Depends(get_session)):
+	task = await tasks_db.get_task_by_id(db, task_id)
+
+	if not task:
+		raise HTTPException(status_code=404, detail="Task not found")
+	
+	task_name = task.task_name
+	task_interval = task.interval
+	
+	await tasks_db.change_task_state(db, task_id, enable)
+
+	if enable:
+		scheduler.add_job(
+			celery_send_task,
+			"interval",
+			seconds=task_interval,
+			args=[task_id, task_name],
+			id=str(task_id),
+			replace_existing=True,
+		)
+	
+		return {"detail": "Task state changed successfully"}
+	
+	scheduler.remove_job(str(task_id))
+	return {"detail": "Task state changed successfully"}
+
+
+@router.post("/task/{task_id}/execute", response_model=dict, tags=["Admin Tasks"])
+async def execute_task(task_id: int, db: AsyncSession = Depends(get_session)):
+	task = await tasks_db.get_task_by_id(db, task_id)
+
+	if not task:
+		raise HTTPException(status_code=404, detail="Task not found")
+	
+	await celery_send_task(task_id, task.task_name)
+	return {"detail": "Task executed successfully"}

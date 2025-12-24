@@ -12,72 +12,68 @@ from colorama import Fore, Style
 from user_agents import parse
 
 from .routers import *
-from .db import init_db, get_session, users, topic, media, application_parameter as ap
-from . import __version__, __release_subname__, config
+from .db import init_db, get_session, users, topic, media, application_parameter as ap, tasks as tasks_db
+from . import __version__, __release_subname__, config, tasks
 
 
 async def init_config(db: AsyncSession):
-    ap_value, _ = await ap.get_application_parameter_with_value(db, "application.system.root_user")
+    result = await ap.get_application_parameter_with_value(db, "application.system.root_user")
+    
+    if result is None:
+        config.system_ap.root_user_id = None
+        return
+    
+    ap_value, _ = result
     config.system_ap.root_user_id = uuid.UUID(ap_value.default_value) if ap_value.default_value is not None else None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"""                    
-    {Fore.BLUE + Style.BRIGHT}                       ##
-    {Fore.BLUE + Style.BRIGHT}                      ###
-    {Fore.BLUE + Style.BRIGHT}                **## *###
-    {Fore.BLUE + Style.BRIGHT}              ++**# **##         {Fore.CYAN + Style.BRIGHT}New Horizons{Style.RESET_ALL}
-    {Fore.BLUE + Style.BRIGHT}        =-----===+ ***#          {Fore.CYAN + Style.BRIGHT}API Codename {Style.RESET_ALL}{Fore.YELLOW}Yoshino Niku{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}   =-----== = ====+++**                    
-    {Fore.BLUE + Style.BRIGHT}  ---      ===++ +*******#       {Style.BRIGHT + Fore.CYAN}Python          : {Style.RESET_ALL}{Fore.YELLOW}{platform.python_version()}{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}  --     --===+ ++***   **##     {Style.BRIGHT + Fore.CYAN}FastAPI version : {Style.RESET_ALL}{Fore.YELLOW}{fastapi.__version__}{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}        ---=== +++***    **#     {Style.BRIGHT + Fore.CYAN}API version     : {Style.RESET_ALL}{Fore.YELLOW}{__version__} {__release_subname__}{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}       --====  +++**     +*      {Style.BRIGHT + Fore.CYAN}OS              : {Style.RESET_ALL}{Fore.YELLOW}{platform.release()}{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}     =---=====++++*   =          {Style.BRIGHT + Fore.CYAN}Started at      : {Style.RESET_ALL}{Fore.YELLOW}{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{Fore.RESET}
-    {Fore.BLUE + Style.BRIGHT}    -----=====++++*
-    {Fore.BLUE + Style.BRIGHT}   ------= ===++++
-    {Fore.BLUE + Style.BRIGHT}    =----  ===+++
-    """)
+	print(f"""                    
+	{Fore.BLUE + Style.BRIGHT}                       ##
+	{Fore.BLUE + Style.BRIGHT}                      ###
+	{Fore.BLUE + Style.BRIGHT}                **## *###
+	{Fore.BLUE + Style.BRIGHT}              ++**# **##         {Fore.CYAN + Style.BRIGHT}New Horizons{Style.RESET_ALL}
+	{Fore.BLUE + Style.BRIGHT}        =-----===+ ***#          {Fore.CYAN + Style.BRIGHT}API Codename {Style.RESET_ALL}{Fore.YELLOW}Yoshino Niku{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}   =-----== = ====+++**                    
+	{Fore.BLUE + Style.BRIGHT}  ---      ===++ +*******#       {Style.BRIGHT + Fore.CYAN}Python          : {Style.RESET_ALL}{Fore.YELLOW}{platform.python_version()}{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}  --     --===+ ++***   **##     {Style.BRIGHT + Fore.CYAN}FastAPI version : {Style.RESET_ALL}{Fore.YELLOW}{fastapi.__version__}{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}        ---=== +++***    **#     {Style.BRIGHT + Fore.CYAN}API version     : {Style.RESET_ALL}{Fore.YELLOW}{__version__} {__release_subname__}{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}       --====  +++**     +*      {Style.BRIGHT + Fore.CYAN}OS              : {Style.RESET_ALL}{Fore.YELLOW}{platform.release()}{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}     =---=====++++*   =          {Style.BRIGHT + Fore.CYAN}Started at      : {Style.RESET_ALL}{Fore.YELLOW}{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{Fore.RESET}
+	{Fore.BLUE + Style.BRIGHT}    -----=====++++*
+	{Fore.BLUE + Style.BRIGHT}   ------= ===++++
+	{Fore.BLUE + Style.BRIGHT}    =----  ===+++
+	""")
 
-    await init_db()
+	await init_db()
 
-    if not os.path.isdir(config.settings.STATIC_MEDIA_FOLDER):
-        os.mkdir(config.settings.STATIC_MEDIA_FOLDER)
+	if not os.path.isdir(config.settings.STATIC_MEDIA_FOLDER):
+		os.mkdir(config.settings.STATIC_MEDIA_FOLDER)
 
-    session_generator = get_session()
-    session = await anext(session_generator)
+	session_generator = get_session()
+	session = await anext(session_generator)
 
-    await init_config(session)
+	await init_config(session)
 
-    try:
-        await ap.init_ap(session)
-        await users.create_root_user(session)
-        await topic.create_base_translation(session)
-        await media.init_media(session)
-        yield
-    finally:
-        await session.close()
+	try:
+		await ap.init_ap(session)
+		await init_config(session)
+		await users.create_root_user(session)
+		await topic.create_base_translation(session)
+		await media.init_media(session)
+		await tasks_db.init_tasks(session)
+		await tasks.schedule_tasks(session)
+		yield
+	finally:
+		await session.close()
 
 
 app = FastAPI(title=config.settings.APP_NAME, version=__version__, lifespan=lifespan)
 
 
 @app.get("/")
-def ping(request: Request):
-    user_agent = parse(request.headers.get("user-agent", "unknown"))
-
-    if user_agent.is_mobile:
-        device_type = "mobile"
-    elif user_agent.is_tablet:
-        device_type = "tablet"
-    elif user_agent.is_pc:
-        device_type = "pc"
-    elif user_agent.is_bot:
-        device_type = "bot"
-    else:
-        device_type = "unknown"
-
+def ping():
     info = {
         "app_name": config.settings.APP_NAME,
         "api_version": __version__,

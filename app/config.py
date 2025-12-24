@@ -1,7 +1,7 @@
 import uuid
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy.ext.asyncio import AsyncSession
+
 
 class Config(BaseSettings):
 	model_config = SettingsConfigDict(
@@ -20,7 +20,7 @@ class Config(BaseSettings):
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 10
 	REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-	
+
 	# Password policy
 	PASSWORD_STRENGTH_POLICY: int = 2
 	PASSWORD_MIN_LENGTH: int = 8
@@ -38,10 +38,21 @@ class Config(BaseSettings):
 	# CORS
 	FRONTEND_URL: str
 
+	# Task Scheduler
+	CELERY_BROKER_URL: str
+	CELERY_BACKEND_URL: str
+	CELERY_TIMEZONE: str = "UTC"
+    
+	# Redis configuration
+	REDIS_HOST: str
+	REDIS_PORT: int
+	REDIS_DB:   int
+	CACHE_THRESHOLD: int = 1 # requests
+
 
 class SystemAP():
-	root_user_id: uuid.UUID | None
+	root_user_id: uuid.UUID | None = None
 
 
-settings = Config()
+settings = Config() # type: ignore
 system_ap = SystemAP()
