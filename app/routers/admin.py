@@ -1,18 +1,18 @@
 import uuid
-
-from fastapi import Depends, APIRouter, HTTPException, Body, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from ..utils.security import check_password_strength
-from ..utils.jwt import jwt_auth_check_permission
-from ..db import users as udbfunc, get_session, jwt as jwtdb, tasks as tasks_db
-from ..config import settings
-from ..schema import users, token, tasks
-from ..db.enums import UserRoles
-from ..tasks import scheduler, celery_send_task
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/admin", 
+from ..config import settings
+from ..db import get_session, jwt as jwtdb, tasks as tasks_db, users as udbfunc
+from ..db.enums import UserRoles
+from ..schema import tasks, token, users
+from ..tasks import celery_send_task, scheduler
+from ..utils.jwt import jwt_auth_check_permission
+from ..utils.security import check_password_strength
+
+router = APIRouter(prefix="/admin",
 	dependencies=[
 			Depends(jwt_auth_check_permission([UserRoles.admin]))
 		]
@@ -27,7 +27,7 @@ async def users_list(db: AsyncSession = Depends(get_session)):
 async def create_user(user: users.UserCreateRequest, db: AsyncSession = Depends(get_session)):
 	if not check_password_strength(user.password):
 		raise HTTPException(
-			status_code=400, 
+			status_code=400,
 			detail=f"Password does not meet strength requirements (min length: {settings.PASSWORD_MIN_LENGTH}, policy: {settings.PASSWORD_STRENGTH_POLICY})"
 		)
 
@@ -44,28 +44,28 @@ async def deactivate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_ses
 
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
-	
+
 	return user
 
 
 @router.put("/user/{user_id}/reactivate", tags=["Admin User"], response_model=users.UserBase)
 async def reactivate_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
-	try:	
+	try:
 		user = await udbfunc.change_user_availability(db, user_id, False)
 	except udbfunc.RootUserException:
 		raise HTTPException(status_code=400, detail="Cannot reactivate the root user")
 
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
-	
+
 	return user
 
 
 @router.patch("/user/{user_id}/reset_password", tags=["Admin User"])
-async def reset_user_password(user_id: uuid.UUID, 
-							  user_must_change_password: Annotated[bool, Query()], 
-							  req: Annotated[users.ResetPasswordRequest, Body()], 
-							  db: AsyncSession = Depends(get_session)):
+async def reset_user_password(user_id: uuid.UUID,
+							user_must_change_password: Annotated[bool, Query()],
+							req: Annotated[users.ResetPasswordRequest, Body()],
+							db: AsyncSession = Depends(get_session)):
 	user = await udbfunc.get_user_by_id(db, user_id)
 
 	if not user:
@@ -73,10 +73,10 @@ async def reset_user_password(user_id: uuid.UUID,
 
 	if not check_password_strength(req.password):
 		raise HTTPException(
-			status_code=400, 
+			status_code=400,
 			detail=f"Password does not meet strength requirements (min length: {settings.PASSWORD_MIN_LENGTH}, policy: {settings.PASSWORD_STRENGTH_POLICY})"
 		)
-	
+
 	user.password_hash = udbfunc.hash_password(req.password)
 	user.force_password_change = user_must_change_password
 
@@ -94,13 +94,13 @@ async def delete_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_session
 
 	if not success:
 		raise HTTPException(status_code=404, detail="User not found")
-	
+
 	return {"detail": "User deleted successfully"}
 
 
 @router.patch("/user/{user_id}/change_role", tags=["Admin User"], response_model=users.UserBase)
 async def change_user_role(user_id: uuid.UUID, new_role: Annotated[UserRoles, Query()],
-						   db: AsyncSession = Depends(get_session)):
+							db: AsyncSession = Depends(get_session)):
 	try:
 		user = await udbfunc.update_role(db, user_id, new_role)
 	except udbfunc.RootUserException:
@@ -110,7 +110,7 @@ async def change_user_role(user_id: uuid.UUID, new_role: Annotated[UserRoles, Qu
 
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
-	
+
 	return user
 
 
@@ -120,10 +120,10 @@ async def jwt_list(db: AsyncSession = Depends(get_session)):
 
 
 @router.post("/jwt/{token_id}/revoke", response_model=dict, tags=["Admin JWT"])
-async def revoke_jwt(token_id: str, db: AsyncSession = Depends(get_session)):
+async def revoke_jwt(token_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
 	if not await jwtdb.revoke_jwt_token(db, token_id):
 		raise HTTPException(status_code=404, detail="Token not found")
-	
+
 	return {"detail": "Token revoked successfully"}
 
 
@@ -138,25 +138,25 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_session)):
 
 	if not task:
 		raise HTTPException(status_code=404, detail="Task not found")
-	
+
 	return task
 
 
 @router.patch("/task/{task_id}/change_state", response_model=dict, tags=["Admin Tasks"])
 async def change_task_state(task_id: int, enable: Annotated[bool, Query()],
-						    db: AsyncSession = Depends(get_session)):
+							db: AsyncSession = Depends(get_session)):
 	task = await tasks_db.get_task_by_id(db, task_id)
 
 	if not task:
 		raise HTTPException(status_code=404, detail="Task not found")
-	
+
 	task_name = task.task_name
 	task_interval = task.interval
-	
+
 	await tasks_db.change_task_state(db, task_id, enable)
 
 	if enable:
-		scheduler.add_job(
+		scheduler.add_job( # type: ignore
 			celery_send_task,
 			"interval",
 			seconds=task_interval,
@@ -164,10 +164,10 @@ async def change_task_state(task_id: int, enable: Annotated[bool, Query()],
 			id=str(task_id),
 			replace_existing=True,
 		)
-	
+
 		return {"detail": "Task state changed successfully"}
-	
-	scheduler.remove_job(str(task_id))
+
+	scheduler.remove_job(str(task_id)) # type: ignore
 	return {"detail": "Task state changed successfully"}
 
 
@@ -177,6 +177,6 @@ async def execute_task(task_id: int, db: AsyncSession = Depends(get_session)):
 
 	if not task:
 		raise HTTPException(status_code=404, detail="Task not found")
-	
+
 	await celery_send_task(task_id, task.task_name)
 	return {"detail": "Task executed successfully"}

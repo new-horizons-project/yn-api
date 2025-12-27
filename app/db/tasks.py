@@ -1,14 +1,15 @@
-from typing import Optional
 from datetime import datetime
+from typing import Any, Optional, Sequence
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import schema
 from .. import config
+from . import schema
 
-async def get_tasks(db: AsyncSession) -> list[schema.SchedulableTask]:
+
+async def get_tasks(db: AsyncSession) -> Sequence[schema.SchedulableTask]:
 	result = await db.scalars(select(schema.SchedulableTask))
 	return result.all()
 
@@ -52,11 +53,11 @@ async def change_task_state(db: AsyncSession, task_id: int, enable: bool) -> Non
 
 
 async def init_tasks(db: AsyncSession):
-	tasks_list = {
-		
+	tasks_list: dict[str, Any] = {
+
 	}
 
-	
+
 	for name, info in tasks_list.items():
 		task = await get_task_by_name(db, name)
 

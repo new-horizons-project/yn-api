@@ -1,15 +1,14 @@
 import uuid
 from typing import Optional
 
-from fastapi import Depends, APIRouter, HTTPException, Body, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..utils.jwt import jwt_auth_check_permission, jwt_extract_user_id_or_none
-from ..db       import get_session, application_parameter as ap_db
+from ..db import application_parameter as ap_db, get_session
 from ..db.enums import UserRoles
-from ..schema.application_parameter import ApplicationParameterValue
+from ..utils.jwt import jwt_auth_check_permission, jwt_extract_user_id_or_none
 
-router = APIRouter(prefix="/ap", tags=["Application Parameter"], 
+router = APIRouter(prefix="/ap", tags=["Application Parameter"],
 	dependencies=[
 		Depends(jwt_auth_check_permission([UserRoles.admin]))
 	]

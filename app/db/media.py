@@ -1,22 +1,21 @@
-import datetime
-import uuid
 import hashlib
+import uuid
 from io import BytesIO
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, exists
-from sqlalchemy.orm import selectinload
 from fastapi import UploadFile
+from sqlalchemy import exists, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from . import schema
 from .. import config
-from ..utils import media as m
-from ..db.enums import MediaType, MediaSize
 from ..db.application_parameter import set_default_value
+from ..db.enums import MediaSize, MediaType
 from ..db.users import get_root_user
+from ..utils import media as m
+from . import schema
 
 
-async def media_exist(db: AsyncSession, cover_image_id: int) -> int:
+async def media_exist(db: AsyncSession, cover_image_id: int) -> int | None:
 	return await db.scalar(
 		select(
 			exists()
@@ -27,12 +26,12 @@ async def media_exist(db: AsyncSession, cover_image_id: int) -> int:
 
 async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
 				    generate_types: list[MediaSize] | None = None, trim: bool = True) -> schema.MediaObject:
-	file_name = "uuid" + str(uuid.uuid4()) + "_" + file.filename
+	file_name = "uuid" + str(uuid.uuid4()) + "_" + (file.filename or '')
 
 	original_file = BytesIO()
 	while chunk := await file.read(1024*1024):
 		original_file.write(chunk)
-	
+
 	original_file.seek(0)
 
 	media = schema.MediaObject(
@@ -66,7 +65,9 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 				media.sha256_hash_large = generated_sha256
 			case MediaSize.thumbnail:
 				media.sha256_hash_thumb = generated_sha256
-		
+			case MediaSize.original:
+				...
+
 		with open(f"{config.settings.STATIC_MEDIA_FOLDER}/{generated_file_name}", "wb") as f:
 			f.write(generated_file)
 
@@ -83,24 +84,25 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 async def init_media(db: AsyncSession):
 	if await db.scalar(select(exists().where(schema.MediaObject.id != None))):
 		return
-	
+
 	root_user = await get_root_user(db)
 
 	if not root_user:
 		raise Exception("Root user not found")
-	
-	logo_data: bytes = 0
+
+	logo_data: bytes = b''
 
 	with open("./media/logo.png", "rb") as f:
 		logo_data = f.read()
-		
+
 	media = await add_media(
 		db,
 		topic_id = None,
 		user = root_user,
 		file = UploadFile(
 			filename="logo.png",
-			file=BytesIO(logo_data)),
+			file=BytesIO(logo_data)
+		),
 		content_type = MediaType.system,
 		generate_types=[
 			MediaSize.small,

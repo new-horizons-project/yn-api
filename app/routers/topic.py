@@ -2,15 +2,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import (
 	category as category_db,
-)
-from ..db import (
 	get_session,
-	schema,
 	media as media_db,
 	tag as tag_db,
 	topic as topic_db,
@@ -38,50 +34,15 @@ async def search_topics(
 	order:  str = Query("asc",   pattern="^(asc|desc)$"),
 	db: AsyncSession = Depends(get_session)
 ) -> topics.PaginatedTopics:
-	stmt = select(schema.Topic).where(schema.Topic.translations.any())
-	if search:
-		stmt = stmt.where(schema.Topic.name.ilike(f"%{search}%"))
-
-	if tags:
-		tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-		if tag_list:
-			stmt = stmt.where(
-				exists()
-				.where(schema.TagInTopic.topic_id == schema.Topic.id,)
-				.where(
-					schema.TagInTopic.tag_id.in_(
-						select(schema.Tag.id).where(schema.Tag.name.in_(tag_list))
-					)
-				)
-			)
-
-	sort_column = schema.Topic.name if sort == "title" else schema.Topic.created_at
-
-	if order == "desc":
-		sort_column = sort_column.desc()
-	stmt = stmt.order_by(sort_column)
-
-	total = await db.scalar(
-		select(func.count())
-		.select_from(stmt.subquery())
-	) or 0
-
-	offset = (page - 1) * limit
-	stmt = stmt.offset(offset).limit(limit)
-
-	result = await db.scalars(stmt)
-
-	paginated_topics = [topics.TopicBase.model_validate(row) for row in result.all()]
-	return topics.PaginatedTopics(
-		total  = total,
-		topics = paginated_topics,
-	)
+	return await topic_db.search_topics(search, tags, page, limit, sort, order, db)
 
 
 @router.post("/create")
-async def create_topic(topic: topics.TopicCreateRequst,
+async def create_topic(
+	topic: topics.TopicCreateRequst,
 	user_id: uuid.UUID = Depends(jwt_extract_user_id),
-	db: AsyncSession = Depends(get_session)):
+	db: AsyncSession = Depends(get_session)
+):
 	if not await category_db.exist_by_id(db, topic.category_id):
 		raise HTTPException(status_code=404, detail="Category not exists")
 
@@ -125,7 +86,7 @@ async def add_translation(
 		raise HTTPException(404, "Topic not found")
 
 	translation_code = await tc_db.get_translation_code_by_id(translation.translation_code_id, db)
-	
+
 	if not translation_code:
 		raise HTTPException(404, "Translation code not found")
 
@@ -138,7 +99,7 @@ async def edit_translation(
 	translation_id: int,
 	translation_req: topics.TranslationEditRequest,
 	db: AsyncSession = Depends(get_session),
-	user_id = Depends(jwt_extract_user_id)
+	user_id: uuid.UUID = Depends(jwt_extract_user_id)
 ):
 	translation = await topic_db.get_topic_translations(topic_id, translation_id, db)
 
@@ -175,7 +136,7 @@ async def del_translation(
 @router.delete("/{topic_id}")
 async def delete_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 	topic = await topic_db.get_topic(topic_id, db)
-	
+
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
 
@@ -197,7 +158,7 @@ async def get_topic_category(topic_id: int, db: AsyncSession = Depends(get_sessi
 
 	if topic_category is None:
 		raise HTTPException(status_code=404, detail="Topic not found")
-	
+
 	return topic_category
 
 
@@ -212,7 +173,7 @@ async def get_translation_by_id(topic_id: int, translation_id: int, db: AsyncSes
 
 	if not translations:
 		raise HTTPException(status_code=404, detail="Translations not found")
-	
+
 	return translations
 
 

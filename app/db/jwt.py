@@ -1,46 +1,59 @@
-import uuid
-
 import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+from typing import Sequence
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import schema
 
-async def get_jwt_tokens_list(db: AsyncSession) -> list[schema.JWT_Token]:
-	res = await db.execute(select(schema.JWT_Token))
-	return res.scalars().all()
+
+async def get_jwt_tokens_list(db: AsyncSession) -> Sequence[schema.JWT_Token]:
+	res = await db.scalars(select(schema.JWT_Token))
+	return res.all()
 
 
-async def get_jwt_token_by_id(db: AsyncSession, token_id: str) -> schema.JWT_Token | None:
-	res = await db.execute(select(schema.JWT_Token).where(schema.JWT_Token.id == token_id))
-	return res.scalars().first()
+async def get_jwt_token_by_id(db: AsyncSession, token_id: uuid.UUID) -> schema.JWT_Token | None:
+	return await db.scalar(
+		select(schema.JWT_Token)
+		.where(schema.JWT_Token.id == token_id)
+	)
 
 
-async def get_jwt_token_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> list[schema.JWT_Token] | None:
-	res = await db.execute(select(schema.JWT_Token).where(schema.JWT_Token.user_id == user_id,
-													      schema.JWT_Token.is_revoked == False))
-	return res.scalars().all()
+async def get_jwt_token_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> Sequence[schema.JWT_Token] | None:
+	res = await db.scalars(
+		select(schema.JWT_Token)
+		.where(
+			schema.JWT_Token.user_id == user_id,
+			schema.JWT_Token.is_revoked.is_(False)
+		)
+	)
+	return res.all()
 
 
-async def check_jwt_token(db: AsyncSession, token: str) -> bool:
-	res = await db.execute(select(schema.JWT_Token).where(schema.JWT_Token.token == token,
-													      schema.JWT_Token.is_revoked == False))
-	token: schema.JWT_Token = res.scalars().first()
+async def check_jwt_token(db: AsyncSession, jwt_token: str) -> bool:
+	token = await db.scalar(
+		select(schema.JWT_Token)
+		.where(
+			schema.JWT_Token.token == jwt_token,
+			schema.JWT_Token.is_revoked.is_(False)
+		)
+	)
 
 	if not token:
 		return False
-	
-	if token.expires_at.replace(tzinfo=datetime.timezone.utc) < \
-								datetime.datetime.now(datetime.timezone.utc):
+
+	now = datetime.datetime.now(datetime.timezone.utc)
+	if token.expires_at.replace(tzinfo = datetime.timezone.utc) < now:
 		token.is_revoked = True
 		db.add(token)
 		await db.commit()
 		return False
-	
-	token.last_used = datetime.datetime.now(datetime.timezone.utc)
+
+	token.last_used = now
 	db.add(token)
 	await db.commit()
-	
+
 	return True
 
 
@@ -49,7 +62,7 @@ async def register_jwt_token(db: AsyncSession, token: schema.JWT_Token):
 	await db.commit()
 
 
-async def revoke_jwt_token(db: AsyncSession, token_id: int) -> bool:
+async def revoke_jwt_token(db: AsyncSession, token_id: uuid.UUID) -> bool:
 	token = await get_jwt_token_by_id(db, token_id)
 
 	if not token:

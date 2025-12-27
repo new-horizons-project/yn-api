@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+from typing import Optional, Callable, Awaitable, Any
 
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -13,9 +13,11 @@ from .security import decode_token
 security = HTTPBearer()
 security_no_autoerror = HTTPBearer(auto_error=False)
 
-def jwt_auth_check_permission(allowed_roles: list[UserRoles]):
-	async def wrapper(credentials: HTTPAuthorizationCredentials = Depends(security),
-				      db: AsyncSession = Depends(get_session)):
+def jwt_auth_check_permission(allowed_roles: list[UserRoles]) -> Callable[..., Awaitable[Any]]:
+	async def wrapper(
+		credentials: HTTPAuthorizationCredentials = Depends(security),
+		db: AsyncSession = Depends(get_session)
+	) -> None:
 		token = credentials.credentials
 		payload = decode_token(token)
 
@@ -56,7 +58,7 @@ def extract_user_id(token: str):
 
 async def jwt_extract_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> uuid.UUID:
 	return extract_user_id(credentials.credentials)
-	
 
-async def jwt_extract_user_id_or_none(credentials: HTTPAuthorizationCredentials = Depends(security_no_autoerror)) -> Optional[uuid.UUID]:
+
+async def jwt_extract_user_id_or_none(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_no_autoerror)) -> Optional[uuid.UUID]:
 	return None if credentials is None else extract_user_id(credentials.credentials)

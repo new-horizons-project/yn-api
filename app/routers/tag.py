@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db import get_session
-from ..db import tag as tag_db
+from ..db import get_session, tag as tag_db
 from ..db.enums import UserRoles
 from ..schema import tag, topics
 from ..utils.jwt import jwt_auth_check_permission

@@ -1,12 +1,12 @@
-from typing import Optional
 import uuid
+from typing import Any, Optional
 
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, exists
 
-from . import schema, users, enums
 from ..schema.application_parameter import ApplicationParameterValue
 from ..utils import application_parameter as ap_utils
+from . import enums, schema, users
 
 
 class ApplicationParameterNotFound(Exception):
@@ -18,23 +18,24 @@ async def get_application_parameter_by_name(db: AsyncSession, name: str) -> sche
     result = await db.execute(
         select(schema.ApplicationParameter).where(schema.ApplicationParameter.name == name)
     )
-    return result.scalar_one_or_none() 
+    return result.scalar_one_or_none()
 
 
-async def check_application_parameter_exists(db: AsyncSession, name: str) -> bool:
-	return (await db.execute(select(
-		exists().where(
-			schema.ApplicationParameter.name == name
+async def check_application_parameter_exists(db: AsyncSession, name: str) -> bool | None:
+	return await db.scalar(
+		select(
+			exists()
+			.where(schema.ApplicationParameter.name == name)
 		)
-	))).scalar()
+	)
 
 
 async def get_application_parameter_value_by_id(db: AsyncSession, ap_id: uuid.UUID) -> schema.APValue | None:
 	result = await db.execute(
 		select(schema.APValue)
-			.where(
-				schema.APValue.ap_id == ap_id
-			)
+		.where(
+			schema.APValue.ap_id == ap_id
+		)
 	)
 
 	return result.scalar_one_or_none()
@@ -45,11 +46,11 @@ async def get_application_parameter_with_value(db: AsyncSession, name: str):
 		select(schema.ApplicationParameter, schema.APValue)
 		.outerjoin(
 			schema.APValue,
-			(schema.APValue.ap_id == schema.ApplicationParameter.id) & (schema.APValue.override == True)
+			(schema.APValue.ap_id == schema.ApplicationParameter.id) & (schema.APValue.override.is_(True))
 		)
 		.where(schema.ApplicationParameter.name == name)
 	)
-	
+
 	return result.first()
 
 
@@ -58,17 +59,17 @@ async def get_application_parameter_with_value_by_id(db: AsyncSession, ap_id: uu
 		select(schema.ApplicationParameter, schema.APValue)
 		.outerjoin(
 			schema.APValue,
-			(schema.APValue.ap_id == schema.ApplicationParameter.id) & (schema.APValue.override == True)
+			(schema.APValue.ap_id == schema.ApplicationParameter.id) & (schema.APValue.override.is_(True))
 		)
 		.where(schema.ApplicationParameter.id == ap_id)
 	)
-	
+
 	return result.first()
 
 
 async def user_get_application_parameter(db: AsyncSession, name: str, user_id: Optional[uuid.UUID] = None) -> ApplicationParameterValue | None:
 	result = await get_application_parameter_with_value(db, name)
-	
+
 	if not result:
 		return None
 
@@ -77,20 +78,20 @@ async def user_get_application_parameter(db: AsyncSession, name: str, user_id: O
 	if application_parameter.visibility != enums.AP_visibility.public:
 		if not user_id:
 			return None
-		
+
 		user = await users.get_user_by_id(db, user_id)
-		
+
 		if not user:
 			return None
-		
+
 		if application_parameter.visibility in [enums.AP_visibility.system, enums.AP_visibility.private]:
 			if user.role != enums.UserRoles.admin:
 				return None
-				
+
 	return ApplicationParameterValue(
 		value=application_parameter.default_value if not application_parameter_value\
-			   							          or not application_parameter_value.override\
-										          else application_parameter_value.value,
+													or not application_parameter_value.override\
+													else application_parameter_value.value,
 		value_type=application_parameter.type
 	)
 
@@ -100,7 +101,7 @@ async def add_application_parameter_value(db: AsyncSession, ap_id: uuid.UUID, va
 
 	if not result:
 		raise ApplicationParameterNotFound()
-	
+
 	application_parameter, ap_value = result
 
 	if not ap_utils.validate_data(value, application_parameter.type):
@@ -126,17 +127,17 @@ async def delete_application_parameter_value(db: AsyncSession, ap_id: uuid.UUID,
 
 	if not ap_value:
 		raise ValueError()
-	
+
 	ap_value.value = "" if wipe else ap_value.value
 	ap_value.override = False
 
 	await db.commit()
 
 
-async def set_default_value(db: AsyncSession, name: str, value: any):
+async def set_default_value(db: AsyncSession, name: str, value: Any):
 	ap = await get_application_parameter_by_name(db, name)
-	
-	if not ap_utils.validate_data(value, ap.type):
+
+	if ap is None or not ap_utils.validate_data(value, ap.type):
 		raise ValueError()
 
 	ap.default_value = str(value)
@@ -148,7 +149,7 @@ async def init_ap(db: AsyncSession):
 	for ap_dc in ap_utils.get_application_parameters():
 		if await check_application_parameter_exists(db, ap_dc.name):
 			continue
-		
+
 		new_ap = schema.ApplicationParameter(
 			name             = ap_dc.name,
 			kind             = ap_dc.kind,

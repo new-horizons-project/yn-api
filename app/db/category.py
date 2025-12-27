@@ -1,10 +1,43 @@
-from sqlalchemy import delete, exists, select, update
+from typing import Optional
+
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..redis.cache import category_cache
-from ..schema.category import CategoryCreateRequst, CategoryUpdateRequst
+from ..schema.category import (
+	CategoryBase,
+	CategoryCreateRequst,
+	CategoryUpdateRequst,
+	PaginatedCategories,
+)
 from . import schema
 
+
+async def search_categories(
+    search: Optional[str],
+    page:     int,
+    per_page: int,
+    db: AsyncSession
+) -> PaginatedCategories:
+	stmt = select(schema.Category)
+	if search:
+		stmt = stmt.where(schema.Category.name.ilike(f"%{search}%"))
+
+	total = await db.scalar(
+		select(func.count())
+		.select_from(stmt.subquery())
+	) or 0
+
+	offset = (page - 1) * per_page
+	stmt = stmt.offset(offset).limit(per_page)
+
+	result = await db.scalars(stmt)
+	paginated_categories = [CategoryBase.model_validate(row) for row in result.all()]
+
+	return PaginatedCategories(
+		total = total,
+		categories = paginated_categories,
+	)
 
 async def create(db: AsyncSession, category: CategoryCreateRequst) -> int:
 	new_category = schema.Category(

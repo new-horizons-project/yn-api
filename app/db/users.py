@@ -1,12 +1,13 @@
 import uuid
+from typing import Sequence
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import schema
 from .. import config
 from ..schema.users import UserCreateRequest
 from ..utils.security import hash_password
+from . import schema
 from .application_parameter import set_default_value
 
 
@@ -20,7 +21,7 @@ class RootUserException(Exception):
 		super().__init__("Cannot modify the root user")
 
 
-async def get_users_list(db: AsyncSession) -> list[schema.User]:
+async def get_users_list(db: AsyncSession) -> Sequence[schema.User]:
 	res = await db.execute(select(schema.User))
 	return res.scalars().all()
 
@@ -39,16 +40,16 @@ async def get_root_user(db: AsyncSession) -> schema.User | None:
     result = await db.execute(
         select(schema.User).where(schema.User.id == config.system_ap.root_user_id)
     )
-    
+
     users = result.scalars().all()
-    
+
     if len(users) > 1:
-        raise DatabaseCorruptUsersException("More than one root user found")
-    
+        raise DatabaseCorruptUsersException()
+
     return users[0] if users else None
 
 
-async def create_root_user(db: AsyncSession):	
+async def create_root_user(db: AsyncSession):
 	if config.system_ap.root_user_id is not None:
 		return
 
@@ -74,7 +75,7 @@ async def change_user_availability(db: AsyncSession, user_id: uuid.UUID, is_disa
 
 	if not user:
 		return None
-	
+
 	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
@@ -103,12 +104,12 @@ async def create_user(db: AsyncSession, user: UserCreateRequest) -> schema.User:
 	return new_user
 
 
-async def update_role(db: AsyncSession, user_id: uuid.UUID, new_role: schema.UserRoles) -> schema.User | None:	
+async def update_role(db: AsyncSession, user_id: uuid.UUID, new_role: schema.UserRoles) -> schema.User | None:
 	user = await get_user_by_id(db, user_id)
 
 	if not user:
 		return None
-	
+
 	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
@@ -125,7 +126,7 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> bool:
 
 	if not user:
 		return False
-	
+
 	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
@@ -145,7 +146,7 @@ async def change_username(db: AsyncSession, user_id: uuid.UUID, new_username: st
 
 	if not user:
 		return None
-	
+
 	if user.id == config.system_ap.root_user_id:
 		raise RootUserException()
 
@@ -158,9 +159,9 @@ async def change_username(db: AsyncSession, user_id: uuid.UUID, new_username: st
 
 
 async def change_password(db: AsyncSession,
-						  user_id: uuid.UUID,
-						  new_password: str,
-						  force_password_change: bool) -> bool:
+						user_id: uuid.UUID,
+						new_password: str,
+						force_password_change: bool) -> bool:
 	user = await get_user_by_id(db, user_id)
 
 	if not user:

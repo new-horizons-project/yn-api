@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +31,13 @@ async def get_translation_code_by_id(translation_code_id: int, db: AsyncSession)
 
 	return translation
 
+
+async def get_used(code_id: int, db: AsyncSession) -> int:
+	return await db.scalar(
+		select(func.count())
+		.select_from(schema.TopicTranslation)
+		.where(schema.TopicTranslation.translation_id == code_id)
+	) or 0
 
 async def create_translation_code(db: AsyncSession, translation: tc.TranslationCodeCreateRequest) -> int | None:
 	query = insert(schema.Translation).values(

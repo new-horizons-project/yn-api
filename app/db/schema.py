@@ -1,17 +1,16 @@
 from __future__ import annotations
+
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
-import uuid
 
-from sqlalchemy import (
-	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime, Integer
-)
-from sqlalchemy.orm import (
-	Mapped, mapped_column, relationship, DeclarativeBase
-)
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from .enums import *
+
 
 class Base(DeclarativeBase):
 	pass
@@ -144,7 +143,7 @@ class Tag(Base):
 	topic: Mapped[list[Topic]] = relationship(
 		secondary="tags_in_topic",
 		back_populates="tags"
-	) 
+	)
 
 
 class TagInTopic(Base):
@@ -240,7 +239,7 @@ class APValue(Base):
 	ap_id    : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),
 		ForeignKey("application_parameters.id", ondelete="CASCADE"), nullable=False,
 	)
-	
+
 	parameter: Mapped["ApplicationParameter"] = relationship(back_populates="value")
 
 

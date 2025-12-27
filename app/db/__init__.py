@@ -1,13 +1,12 @@
+import logging
 from typing import AsyncGenerator
 from urllib.parse import quote_plus
-import logging
 
 import asyncpg
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from .schema import Base
 from ..config import settings
+from .schema import Base
 
 user = quote_plus(settings.DATABASE_USERNAME)
 password = quote_plus(settings.DATABASE_PASSWORD)
@@ -20,7 +19,7 @@ engine = create_async_engine(
 	f"postgresql+asyncpg://{user}:{password}@{host}/{dbname}"
 )
 
-session_local = sessionmaker(
+session_local = async_sessionmaker(
 	class_=AsyncSession,
 	autocommit=False,
 	autoflush=False,

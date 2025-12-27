@@ -1,19 +1,18 @@
+import hashlib
+import string
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
-import uuid
-import string
 
-import jwt
 import bcrypt
-import hashlib
+import jwt
 from fastapi import HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.jwt import check_jwt_token
+from ..config import settings
 from ..db.enums import JWT_Type
-from ..config import settings 
+from ..db.jwt import check_jwt_token
 
 
 def hash_password(password: str) -> str:
@@ -46,7 +45,7 @@ def check_password_strength(password: str) -> bool:
 			policy_higher = 1
 		elif char in string.punctuation:
 			policy_special = 1
-	
+
 	return True if (
 		policy_lower + policy_higher + policy_special + policy_digit
 	) >= settings.PASSWORD_STRENGTH_POLICY else False
@@ -57,7 +56,7 @@ def create_access_token(**kwargs: Any) -> str:
 	return create_token(kwargs, settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 
-def create_refresh_token(**kwargs: dict) -> tuple[str, str]:
+def create_refresh_token(**kwargs: Any) -> tuple[str, str]:
 	jti = str(uuid.uuid4())
 
 	kwargs.update(type=JWT_Type.refresh.value)
@@ -66,7 +65,7 @@ def create_refresh_token(**kwargs: dict) -> tuple[str, str]:
 	return (create_token(kwargs, settings.REFRESH_TOKEN_EXPIRE_MINUTES), jti)
 
 
-def create_token(data: dict, exp_minutes: int) -> str:
+def create_token(data: dict[str, Any], exp_minutes: int) -> str:
 	expiration = datetime.now(timezone.utc) + timedelta(minutes = exp_minutes)
 	payload = data.copy()
 	payload.update({"exp": expiration})

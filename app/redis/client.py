@@ -11,7 +11,7 @@ redis_client = Redis(
 	db   = settings.REDIS_DB,
 	decode_responses = True
 )
-redis_client.srem
+
 
 class AsyncRedisPipelineProtocol(Protocol):
     def hgetall(self, name: str) -> dict[Any, Any]: ...

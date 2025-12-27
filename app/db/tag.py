@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db.enums import EntityType
-from ..redis.cache import topic_cache, tag_cache
-from ..schema.tag import TagCreateRequst, TagBase, EditTagRequst
+from ..redis.cache import tag_cache, topic_cache
+from ..schema.tag import EditTagRequst, TagBase, TagCreateRequst
 from ..schema.topics import TopicBase
 from . import schema
 
@@ -160,7 +160,7 @@ async def detach_tag_from_topic(db: AsyncSession, topic_id: int, tag_id: int) ->
 	result = await db.execute(
 		delete(schema.TagInTopic)
 		.where(
-			schema.TagInTopic.topic_id == topic_id, 
+			schema.TagInTopic.topic_id == topic_id,
 			schema.TagInTopic.tag_id == tag_id
 		)
 		.returning(schema.TagInTopic.tag_id)
