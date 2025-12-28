@@ -32,22 +32,17 @@ def validate_data(data: str, data_type: enums.AP_type):
 				return data in ("0", "1")
 			case enums.AP_type.integer:
 				int(data)
-				return True
 			case enums.AP_type.float:
 				float(data)
-				return True
 			case enums.AP_type.json:
 				try:
 					json.loads(data)
-					return True
 				except json.JSONDecodeError:
 					return False
 			case enums.AP_type.datetime:
 				datetime.fromisoformat(data)
-				return True
 			case enums.AP_type.uuid:
 				uuid.UUID(data)
-				return True
 			case enums.AP_type.url:
 				parsed = urlparse(data)
 				return parsed.scheme in ("http", "https") and parsed.netloc
@@ -55,6 +50,8 @@ def validate_data(data: str, data_type: enums.AP_type):
 				return False
 	except ValueError:
 		return False
+	
+	return True
 
 
 def parse_parameters(data: dict, path: str = "") -> List[ApplicationParameterDC]:
