@@ -382,7 +382,8 @@ async def delete_translation_by_id(topic_id: int, translation_id: int, db: Async
 			)
 		)
 	
-	if is_first: return False
+	if is_first:
+		return False
 
 	await db.execute(
 		delete(schema.TopicTranslation)
