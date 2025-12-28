@@ -1,5 +1,6 @@
+from os import path
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List
 from datetime import datetime
 import uuid
 import json
@@ -9,7 +10,8 @@ from urllib.parse import urlparse
 from ..db import enums
 
 
-APPLICATION_PARAMETERS_JSON = "app/application_parameters.json"
+APPLICATION_PARAMETERS_JSON = path.join(path.dirname(__file__), 
+							  "..", "application_parameters.json")
 
 
 @dataclass
@@ -22,37 +24,37 @@ class ApplicationParameterDC:
 
 
 def validate_data(data: str, data_type: enums.AP_type):
-	match data_type:
-		case enums.AP_type.string:
-			return True
-		
-		case enums.AP_type.bool:
-			return isinstance(data, bool)
-		
-		case enums.AP_type.integer:
-			return isinstance(data, int)
-		
-		case enums.AP_type.float:
-			return isinstance(data, float)
-		
-		case enums.AP_type.string:
-			return isinstance(data, str)
-		
-		case enums.AP_type.list:
-			return isinstance(data, list)
-		
-		case enums.AP_type.datetime:
-			return isinstance(data, datetime)
-		
-		case enums.AP_type.uuid:
-			return isinstance(data, uuid.UUID)
-		
-		case enums.AP_type.url:
-			parsed = urlparse(data)
-			return bool(parsed.scheme and parsed.netloc)
-		
-		case _:
-			return False
+	try:
+		match data_type:
+			case enums.AP_type.string:
+				return True
+			case enums.AP_type.bool:
+				return data in ("0", "1")
+			case enums.AP_type.integer:
+				int(data)
+				return True
+			case enums.AP_type.float:
+				float(data)
+				return True
+			case enums.AP_type.json:
+				try:
+					json.loads(data)
+					return True
+				except json.JSONDecodeError:
+					return False
+			case enums.AP_type.datetime:
+				datetime.fromisoformat(data)
+				return True
+			case enums.AP_type.uuid:
+				uuid.UUID(data)
+				return True
+			case enums.AP_type.url:
+				parsed = urlparse(data)
+				return parsed.scheme in ("http", "https") and parsed.netloc
+			case _:
+				return False
+	except ValueError:
+		return False
 
 
 def parse_parameters(data: dict, path: str = "") -> List[ApplicationParameterDC]:
@@ -101,6 +103,3 @@ def get_application_parameters() -> List[ApplicationParameterDC]:
 		data = json.load(f)
 
 	return parse_parameters(data)
-
-if __name__ == "__main__":
-	print(get_application_parameters())

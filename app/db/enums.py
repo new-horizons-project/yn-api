@@ -64,7 +64,7 @@ class AP_type(str, Enum):
 	string = "string"
 	float = "float"
 	bool = "bool"
-	list = "list"
+	json = "json"
 	uuid = "uuid"
 	url = "url"
 
