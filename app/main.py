@@ -90,7 +90,7 @@ app.add_middleware(
     allow_headers=["Access-Control-Allow-Origin", "Authorization"]
 )
 
-app.include_router(routers.ap_routerauth_router)
+app.include_router(routers.auth_router)
 app.include_router(routers.user_router)
 app.include_router(routers.admin_router)
 app.include_router(routers.user_router_public)
