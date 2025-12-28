@@ -11,7 +11,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 
-from .enums import *
+from .enums import UserRoles, ParseMode, DisplayMode, ActionType, ObjectType, MediaType, AP_kind,  AP_type, AP_visibility
 
 class Base(DeclarativeBase):
 	pass

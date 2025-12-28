@@ -11,9 +11,8 @@ from contextlib import asynccontextmanager
 from colorama import Fore, Style
 from user_agents import parse
 
-from .routers import *
 from .db import init_db, get_session, users, topic, media, application_parameter as ap, tasks as tasks_db
-from . import __version__, __release_subname__, config, tasks
+from . import __version__, __release_subname__, config, tasks, routers
 
 
 async def init_config(db: AsyncSession):
@@ -91,17 +90,17 @@ app.add_middleware(
     allow_headers=["Access-Control-Allow-Origin", "Authorization"]
 )
 
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(admin_router)
-app.include_router(user_router_public)
-app.include_router(topic_router)
-app.include_router(topic_router_public)
-app.include_router(tag_router)
-app.include_router(tag_router_public)
-app.include_router(translation_codes_router)
-app.include_router(media_router)
-app.include_router(ap_router)
-app.include_router(ap_router_public)
-app.include_router(category_router)
-app.include_router(category_router_public)
+app.include_router(routers.ap_routerauth_router)
+app.include_router(routers.user_router)
+app.include_router(routers.admin_router)
+app.include_router(routers.user_router_public)
+app.include_router(routers.topic_router)
+app.include_router(routers.topic_router_public)
+app.include_router(routers.tag_router)
+app.include_router(routers.tag_router_public)
+app.include_router(routers.translation_codes_router)
+app.include_router(routers.media_router)
+app.include_router(routers.ap_router)
+app.include_router(routers.ap_router_public)
+app.include_router(routers.category_router)
+app.include_router(routers.category_router_public)
