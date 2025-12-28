@@ -1,3 +1,4 @@
+import json
 from typing import Any, Generic, Optional, Type, TypeVar
 
 from pydantic import BaseModel
@@ -57,7 +58,18 @@ class RedisEntityCache(Generic[T]):
 
 
 	async def set(self, entity_id: int, obj: T) -> None:
-		await redis.hset(self.key(entity_id), mapping = obj.model_dump(mode = "json"))
+		def checknull(value):
+			if value is None:
+				return "null"
+			
+			return value
+
+		mapping = {
+			key: checknull(value) 
+			for key, value in obj.model_dump(mode="json").items()
+		}
+
+		await redis.hset(self.key(entity_id), mapping = mapping)
 
 
 	async def get(self, entity_id: int) -> Optional[T]:
@@ -66,7 +78,17 @@ class RedisEntityCache(Generic[T]):
 		if not raw:
 			return None
 		
-		return self.model.model_validate(raw)
+		object = {}
+
+		for key, value in raw.items():
+			if value == "null":
+				object[key] = None
+				continue
+			object[key] = value
+
+		print(object)
+
+		return self.model.model_validate(object)
 
 
 	async def incr(self, entity_id: int, relation_type: Optional[EntityType] = None) -> int:
