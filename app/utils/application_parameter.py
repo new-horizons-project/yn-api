@@ -42,6 +42,8 @@ def validate_data(data: str, data_type: enums.AP_type):
 			case enums.AP_type.datetime:
 				datetime.fromisoformat(data)
 			case enums.AP_type.uuid:
+				if isinstance(data, uuid.UUID):
+					return True
 				uuid.UUID(data)
 			case enums.AP_type.url:
 				parsed = urlparse(data)
