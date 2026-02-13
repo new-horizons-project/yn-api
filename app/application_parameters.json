@@ -16,6 +16,13 @@
 				"kind" : "gap",
 				"default_value" : "",
 				"visibility" : "public"
+			},
+			"logo_dark_media_id" : {
+				"parameter" : 1,
+				"type" : "integer",
+				"kind" : "gap",
+				"default_value" : "",
+				"visibility" : "public"
 			}
 		}
 	}
