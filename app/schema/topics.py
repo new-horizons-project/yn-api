@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from ..db.enums import ParseMode
 
-
+# TODO: change JSON_STRUCTURE to valid pydantic model
 class TopicBase(BaseModel):
 	id: int
 	name: str
@@ -15,11 +15,12 @@ class TopicBase(BaseModel):
 	creator_user_id: Optional[UUID]
 	cover_image_id:  Optional[int]
 	category_id:     int
+	json_structure:  dict
 
 	class Config:
 		from_attributes = True
 
-class Translation(BaseModel):
+class TranslationCode(BaseModel):
 	id: int
 	translation_code: str
 	full_name: str
@@ -27,22 +28,23 @@ class Translation(BaseModel):
 	class Config:
 		from_attributes = True
 
-class TopicTranslationBase(BaseModel):
+# TODO: change JSON_TEXT to valid pydantic model
+class TopicTextBase(BaseModel):
 	id:               int
 	translation_code: str
 	topic_id:         int
 	parse_mode:       ParseMode
-	text:             str
+	json_text:        dict
 	full_name:        str
 
 	class Config:
 		from_attributes = True
 
-class TopicTranslationCreated(BaseModel):
+# TODO: change JSON_TEXT to valid pydantic model
+class TopicTextCreated(BaseModel):
 	id:               int
 	topic_id:         int
-	parse_mode:       ParseMode
-	text:             str
+	json_text:        dict
 
 	class Config:
 		from_attributes = True
@@ -55,14 +57,14 @@ class TopicCreateRequst(BaseModel):
 class ChangeNameRequst(BaseModel):
 	name: str
 
-class TranslationCreateRequst(BaseModel):
+# TODO: change JSON_TEXT to valid pydantic model
+class TopicTextCreateRequst(BaseModel):
 	translation_code_id: int
-	parse_mode:      ParseMode
-	text:            str
+	json_text:           dict
 
-class TranslationEditRequest(BaseModel):
-	parse_mode:      ParseMode
-	text:            str
+# TODO: change JSON_TEXT to valid pydantic model
+class TopicTextRequest(BaseModel):
+	json_text: dict
 
 class PaginatedTopics(BaseModel):
 	total:  int

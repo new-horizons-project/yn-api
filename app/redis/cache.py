@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from ..db.enums import EntityType
 from ..schema.category import CategoryBase
-from ..schema.topics import TopicBase, TopicTranslationBase
+from ..schema.topics import TopicBase, TopicTextBase
 from ..schema.translation_code import Translation
 from ..schema.tag import TagBase
 from .client import redis
@@ -153,7 +153,7 @@ class RedisEntityCache(Generic[T]):
 
 topic_cache = RedisEntityCache(EntityType.topic, TopicBase)
 category_cache = RedisEntityCache(EntityType.category, CategoryBase)
-topic_translation_cache = RedisEntityCache(EntityType.topic_translation, TopicTranslationBase)
+topic_translation_cache = RedisEntityCache(EntityType.topic_translation, TopicTextBase)
 translation_cache = RedisEntityCache(EntityType.translation, Translation)
 tag_cache = RedisEntityCache(EntityType.tag, TagBase)
 

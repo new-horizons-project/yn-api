@@ -12,8 +12,8 @@ from ..redis.cache import category_cache, topic_cache, topic_translation_cache, 
 from ..schema import category, topics, tag
 from ..schema.topics import (
 	TopicCreateRequst,
-	TopicTranslationBase,
-	TopicTranslationCreated,
+	TopicTextBase,
+	TopicTextCreated,
 	TranslationCreateRequst,
 	TranslationEditRequest,
 )
@@ -80,43 +80,45 @@ async def get_topic_category(topic_id: int, db: AsyncSession) -> category.Catego
 	return topic_category
 
 
-async def get_topic_translations(topic_id: int, translation_id: int, db: AsyncSession) -> topics.TopicTranslationBase | None:
+async def get_topic_text(topic_id: int, translation_id: int, db: AsyncSession) -> topics.TopicTextBase | None:
 	count = await topic_translation_cache.incr(translation_id)
 	topic_translation = await topic_translation_cache.get(translation_id)
+
 	if topic_translation:
 		return topic_translation
 
 	result = await db.execute(
 		select(
-			schema.TopicTranslation.id,
-			schema.TopicTranslation.topic_id,
-			schema.TopicTranslation.parse_mode,
-			schema.TopicTranslation.text,
-			schema.Translation.translation_code,
-			schema.Translation.full_name,
+			schema.TopicText.id,
+			schema.TopicText.topic_id,
+			schema.TopicText.parse_mode,
+			schema.TopicText.text,
+			schema.TranslationCode.translation_code,
+			schema.TranslationCode.full_name,
 		)
 		.join(
-			schema.Translation,
-			schema.Translation.id == schema.TopicTranslation.translation_id,
+			schema.TranslationCode,
+			schema.TranslationCode.id == schema.TopicText.translation_id,
 		)
 		.where(
-			schema.TopicTranslation.topic_id == topic_id,
-			schema.TopicTranslation.id == translation_id
+			schema.TopicText.topic_id == topic_id,
+			schema.TopicText.id == translation_id
 		)
 	)
 	row = result.mappings().first()
 	if not row:
 		return None
-	obj = topics.TopicTranslationBase.model_validate(row)
+	obj = topics.TopicTextBase.model_validate(row)
 
 	if count >= settings.CACHE_THRESHOLD:
 		await topic_translation_cache.set(obj.id, obj)
 		await topic_cache.add_relation(topic_id, EntityType.topic_translation, obj.id)
 	return obj
 
-async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[topics.TopicTranslationBase]:
+async def get_topic_text_list(topic_id: int, db: AsyncSession) -> list[topics.TopicTextBase]:
 	count = await topic_cache.incr(topic_id, EntityType.topic_translation)
 	is_cached = count >= settings.CACHE_THRESHOLD
+
 	if is_cached:
 		caches = await topic_cache.get_relations(topic_id, EntityType.topic_translation)
 		if caches:
@@ -124,24 +126,24 @@ async def get_topic_translations_list(topic_id: int, db: AsyncSession) -> list[t
 
 	result = await db.execute(
 		select(
-			schema.TopicTranslation.id,
-			schema.TopicTranslation.topic_id,
-			schema.TopicTranslation.parse_mode,
-			schema.TopicTranslation.text,
-			schema.Translation.translation_code,
-			schema.Translation.full_name,
+			schema.TopicText.id,
+			schema.TopicText.topic_id,
+			schema.TopicText.parse_mode,
+			schema.TopicText.text,
+			schema.TranslationCode.translation_code,
+			schema.TranslationCode.full_name,
 		)
 		.join(
-			schema.Translation,
-			schema.Translation.id == schema.TopicTranslation.translation_id,
+			schema.TranslationCode,
+			schema.TranslationCode.id == schema.TopicText.translation_id,
 		)
-		.where(schema.TopicTranslation.topic_id == topic_id)
+		.where(schema.TopicText.topic_id == topic_id)
 	)
 	rows = result.mappings().all()
 
-	topic_translations: list[topics.TopicTranslationBase] = []
+	topic_translations: list[topics.TopicTextBase] = []
 	for row in rows:
-		obj = topics.TopicTranslationBase.model_validate(row)
+		obj = topics.TopicTextBase.model_validate(row)
 		if is_cached:
 			await topic_translation_cache.set(obj.id, obj)
 			await topic_cache.add_relation(topic_id, EntityType.topic_translation, obj.id)
@@ -176,7 +178,6 @@ async def get_list_topic_tags(topic_id: int, db: AsyncSession) -> list[tag.TagBa
 	return tags
 
 
-
 async def create_topic(
 	db: AsyncSession,
 	topic: TopicCreateRequst,
@@ -184,7 +185,6 @@ async def create_topic(
 ) -> int:
 	new_topic = schema.Topic(
 		name=topic.name,
-		name_hash=hash_topic_name(topic.name),
 		creator_user_id=user_id,
 		cover_image_id=topic.cover_image_id,
 		category_id=topic.category_id
@@ -199,14 +199,15 @@ async def create_topic(
 	return new_topic.id
 
 
+# TODO: Rework logic of adding the translation (text model verification)
 async def add_translation(
 	db: AsyncSession,
 	topic_id: int,
 	user_id: uuid.UUID,
 	translation: TranslationCreateRequst,
 	translation_code: Translation
-) -> TopicTranslationCreated:
-	new_translation = schema.TopicTranslation(
+) -> TopicTextCreated:
+	new_translation = schema.TopicText(
 		translation_id    = translation.translation_code_id,
 		creator_user_id   = user_id,
 		topic_id          = topic_id,
@@ -215,7 +216,7 @@ async def add_translation(
 		last_edited_by    = user_id
 	)
 
-	has_translation: bool = await db.scalar(select(exists().where(schema.TopicTranslation.topic_id == topic_id)))
+	has_translation: bool = await db.scalar(select(exists().where(schema.TopicText.topic_id == topic_id)))
 	new_translation.first = not has_translation
 
 	db.add(new_translation)
@@ -223,7 +224,7 @@ async def add_translation(
 	await db.refresh(new_translation)
 
 	if await topic_cache.exist(topic_id):
-		topic_translation = TopicTranslationBase(
+		topic_translation = TopicTextBase(
 			id=new_translation.id,
 			topic_id=topic_id,
 			parse_mode=new_translation.parse_mode,
@@ -234,44 +235,7 @@ async def add_translation(
 		await topic_translation_cache.set(new_translation.id, topic_translation)
 		await topic_cache.add_relation(topic_id, EntityType.topic_translation, new_translation.id)
 
-	return topics.TopicTranslationCreated.model_validate(new_translation)
-
-
-
-async def add_translation(
-	db: AsyncSession,
-	topic_id: int,
-	user_id: uuid.UUID,
-	translation: TranslationCreateRequst,
-	translation_code: Translation
-) -> TopicTranslationCreated:
-	new_translation = schema.TopicTranslation(
-		translation_id    = translation.translation_code_id,
-		creator_user_id   = user_id,
-		topic_id          = topic_id,
-		parse_mode        = translation.parse_mode,
-		text              = translation.text,
-		last_edited_by    = user_id,
-		first             = False
-	)
-
-	db.add(new_translation)
-	await db.commit()
-	await db.refresh(new_translation)
-
-	if await topic_cache.exist(topic_id):
-		topic_translation = TopicTranslationBase(
-			id=new_translation.id,
-			topic_id=topic_id,
-			parse_mode=new_translation.parse_mode,
-			text=new_translation.text,
-			translation_code=translation_code.translation_code,
-			full_name=translation_code.full_name,
-		)
-		await topic_translation_cache.set(new_translation.id, topic_translation)
-		await topic_cache.add_relation(topic_id, EntityType.topic_translation, new_translation.id)
-
-	return topics.TopicTranslationCreated.model_validate(new_translation)
+	return topics.TopicTextCreated.model_validate(new_translation)
 
 
 async def create_base_translation(db: AsyncSession) -> None:
@@ -293,15 +257,12 @@ async def create_base_translation(db: AsyncSession) -> None:
 
 
 
-async def change_name(topic_id: int, topic: topics.TopicBase, topic_name: str, db: AsyncSession) -> str:
-	name_hash = hash_topic_name(topic_name)
-
+async def change_name(topic_id: int, topic: topics.TopicBase, topic_name: str, db: AsyncSession):
 	await db.execute(
 		update(schema.Topic)
 		.where(schema.Topic.id == topic_id)
 		.values(
 			name = topic_name,
-			name_hash = name_hash,
 			edited_at = datetime.now(timezone.utc)
 		)
 	)
@@ -311,27 +272,26 @@ async def change_name(topic_id: int, topic: topics.TopicBase, topic_name: str, d
 		topic.name = topic_name
 		await topic_cache.set(topic_id, topic)
 
-	return name_hash
 
-
+# TODO: Revork to current text and struct storing strategy
 async def edit_translation(
 	db: AsyncSession,
 	topic_id: int,
 	translation_id: int,
-	translation: topics.TopicTranslationBase,
+	translation: topics.TopicTextBase,
 	translation_req: TranslationEditRequest,
 	user_id: uuid.UUID
 ) -> None:
 	result = await db.execute(
 		select(
-			schema.TopicTranslation.first,
+			schema.TopicText.first,
 			schema.Topic.imported
 		).join(
 			schema.Topic,
-			schema.Topic.id == schema.TopicTranslation.topic_id
+			schema.Topic.id == schema.TopicText.topic_id
 		).where(
-			schema.TopicTranslation.topic_id == topic_id,
-			schema.TopicTranslation.id == translation_id
+			schema.TopicText.topic_id == topic_id,
+			schema.TopicText.id == translation_id
 		).limit(1) 
 	)
 
@@ -344,10 +304,10 @@ async def edit_translation(
 		raise HTTPException(409, "Editing not allowed")
 
 	await db.execute(
-		update(schema.TopicTranslation)
+		update(schema.TopicText)
 		.where(
-			schema.TopicTranslation.topic_id == topic_id,
-			schema.TopicTranslation.id == translation_id
+			schema.TopicText.topic_id == topic_id,
+			schema.TopicText.id == translation_id
 		)
 		.values(
 			parse_mode = translation_req.parse_mode,
@@ -375,10 +335,10 @@ async def delete_by_id(topic_id: int, db: AsyncSession) -> None:
 
 async def delete_translation_by_id(topic_id: int, translation_id: int, db: AsyncSession) -> bool:
 	is_first: bool = await db.scalar(
-		select(schema.TopicTranslation.first)
+		select(schema.TopicText.first)
 			.where(
-				schema.TopicTranslation.id == translation_id,
-				schema.TopicTranslation.topic_id == topic_id
+				schema.TopicText.id == translation_id,
+				schema.TopicText.topic_id == topic_id
 			)
 		)
 	
@@ -386,10 +346,10 @@ async def delete_translation_by_id(topic_id: int, translation_id: int, db: Async
 		return False
 
 	await db.execute(
-		delete(schema.TopicTranslation)
+		delete(schema.TopicText)
 		.where(
-			schema.TopicTranslation.topic_id == topic_id,
-			schema.TopicTranslation.id == translation_id
+			schema.TopicText.topic_id == topic_id,
+			schema.TopicText.id == translation_id
 		)
 	)
 	await db.commit()
@@ -398,6 +358,7 @@ async def delete_translation_by_id(topic_id: int, translation_id: int, db: Async
 	return True
 
 
+# TODO: Rework logic of adding the translation (text model verification)
 async def get_headless_topics(db: AsyncSession) -> Optional[list[schema.Topic]]:
 	topics = await db.execute(select(
 		schema.Topic).where(

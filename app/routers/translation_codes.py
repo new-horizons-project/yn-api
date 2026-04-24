@@ -45,8 +45,8 @@ async def delete_translation_code(code_id: int, db: AsyncSession = Depends(get_s
 
 	used = await db.execute(
 		select(func.count())
-		.select_from(schema.TopicTranslation)
-		.where(schema.TopicTranslation.translation_id == code_id)
+		.select_from(schema.TopicText)
+		.where(schema.TopicText.translation_id == code_id)
 	)
 	count = used.scalar()
 

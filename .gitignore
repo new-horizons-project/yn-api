@@ -13,6 +13,7 @@ __pycache__/
 
 # Project-specific files
 *.db
+.DS_Store
 
 # Distribution / packaging
 .Python

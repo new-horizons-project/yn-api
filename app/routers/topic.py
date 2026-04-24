@@ -28,6 +28,7 @@ router = APIRouter(prefix="/topic", tags=["Topic"],
 
 router_public = APIRouter(prefix="/topic", tags=["Topic"])
 
+# TODO: Full logic rework
 @router_public.get('/', response_model = topics.PaginatedTopics)
 async def search_topics(
 	search: str | None = Query(None, description="Search in topic title"),
@@ -107,9 +108,9 @@ async def change_name(
 	if not topic:
 		raise HTTPException(status_code=404, detail="Topic not found")
 
-	name_hash = await topic_db.change_name(topic_id, topic, req.name, db)
+	await topic_db.change_name(topic_id, topic, req.name, db)
 
-	return {"detail": "Topic name changed successfully", "name_hash": name_hash}
+	return {"detail": "Topic name changed successfully"}
 
 
 @router.post("/{topic_id}/add_translation")
@@ -118,7 +119,7 @@ async def add_translation(
 	translation: topics.TranslationCreateRequst,
 	user_id: uuid.UUID = Depends(jwt_extract_user_id),
 	db: AsyncSession = Depends(get_session)
-) -> topics.TopicTranslationCreated:
+) -> topics.TopicTextCreated:
 	topic = await topic_db.get_topic(topic_id, db)
 
 	if not topic:
@@ -201,12 +202,12 @@ async def get_topic_category(topic_id: int, db: AsyncSession = Depends(get_sessi
 	return topic_category
 
 
-@router_public.get("/{topic_id}/translations", response_model=list[topics.TopicTranslationBase])
+@router_public.get("/{topic_id}/translations", response_model=list[topics.TopicTextBase])
 async def get_translations_by_topic(topic_id: int, db: AsyncSession = Depends(get_session)):
 	return await topic_db.get_topic_translations_list(topic_id, db)
 
 
-@router_public.get("/{topic_id}/translations/{translation_id}", response_model=topics.TopicTranslationBase)
+@router_public.get("/{topic_id}/translations/{translation_id}", response_model=topics.TopicTextBase)
 async def get_translation_by_id(topic_id: int, translation_id: int, db: AsyncSession = Depends(get_session)):
 	translations = await topic_db.get_topic_translations(topic_id, translation_id, db)
 

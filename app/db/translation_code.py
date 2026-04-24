@@ -15,13 +15,15 @@ async def get_translation_code_list(db: AsyncSession) -> list[tc.Translation]:
 	)
 	return [tc.Translation.model_validate(obj) for obj in res.all()]
 
+
 async def get_translation_code_by_id(translation_code_id: int, db: AsyncSession) -> Translation | None:
 	count = await translation_cache.incr(translation_code_id)
 	cached = await translation_cache.get(translation_code_id)
+	
 	if cached:
 		return cached
 
-	result = await db.get(schema.Translation, translation_code_id)
+	result = await db.get(schema.TranslationCode, translation_code_id)
 	if result is None:
 		return None
 
@@ -37,8 +39,8 @@ async def create_translation_code(db: AsyncSession, translation: tc.TranslationC
 		translation_code = translation.translation_code,
 		full_name = translation.full_name
 	).on_conflict_do_nothing(
-		index_elements=[schema.Translation.translation_code]
-	).returning(schema.Translation.id)
+		index_elements=[schema.TranslationCode.translation_code]
+	).returning(schema.TranslationCode.id)
 
 	result = await db.execute(query)
 	await db.commit()
@@ -46,13 +48,13 @@ async def create_translation_code(db: AsyncSession, translation: tc.TranslationC
 
 
 async def delete_translation_code(db: AsyncSession, translation_id: int) -> bool:
-    translation = await db.get(schema.Translation, translation_id)
+    translation = await db.get(schema.TranslationCode, translation_id)
     if not translation:
         return False
 
     related = await db.scalar(
-        select(schema.TopicTranslation.id).where(
-            schema.TopicTranslation.translation_id == translation_id
+        select(schema.TopicText.id).where(
+            schema.TopicText.translation_id == translation_id
         )
     )
 

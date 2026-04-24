@@ -9,9 +9,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
 	Mapped, mapped_column, relationship, DeclarativeBase
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-from .enums import UserRoles, ParseMode, DisplayMode, ActionType, ObjectType, MediaType, AP_kind,  AP_type, AP_visibility
+from .enums import UserRoles, DisplayMode, MediaType, AP_kind,  AP_type, AP_visibility
 
 class Base(DeclarativeBase):
 	pass
@@ -30,16 +30,15 @@ class User(Base):
 
 	topic                        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
 	tokens                       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
-	audit_log                    : Mapped[list[Audit]] = relationship(back_populates="user")
 	media_owner                  : Mapped[list[MediaObject]] = relationship(back_populates="user_uploader", foreign_keys="[MediaObject.uploaded_by_user_id]")
 	media_uploader               : Mapped[list[MediaObject]] = relationship(back_populates="user_owner", foreign_keys="[MediaObject.used_user_id]")
-	topic_translations: Mapped[list[TopicTranslation]] = relationship(
+	topic_translations: Mapped[list[TopicText]] = relationship(
 		back_populates="user",
-		foreign_keys="[TopicTranslation.creator_user_id]"
+		foreign_keys="[TopicText.creator_user_id]"
 	)
-	topic_translations_editor: Mapped[list[TopicTranslation]] = relationship(
+	topic_translations_editor: Mapped[list[TopicText]] = relationship(
 		back_populates="user_last_editor",
-		foreign_keys="[TopicTranslation.last_edited_by]"
+		foreign_keys="[TopicText.last_edited_by]"
 	)
 
 
@@ -59,14 +58,14 @@ class JWT_Token(Base):
 	user: Mapped[User] = relationship(back_populates="tokens")
 
 
-class Translation(Base):
+class TranslationCode(Base):
 	__tablename__ = "translations"
 
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	translation_code   : Mapped[str] = mapped_column(String(2), unique=True, nullable=False, index=True)
 	full_name          : Mapped[str] = mapped_column(String(100), nullable=False)
 
-	topic_translations: Mapped[list[TopicTranslation]] = relationship(back_populates="translation", cascade="all, delete-orphan")
+	topic_translations: Mapped[list[TopicText]] = relationship(back_populates="translation", cascade="all, delete-orphan")
 
 
 class Topic(Base):
@@ -74,41 +73,34 @@ class Topic(Base):
 
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	name               : Mapped[str] = mapped_column(String(200), nullable=False)
-	name_hash          : Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
 	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-	imported           : Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	creator_user_id    : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
+	json_structure     : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
+	gen_text_structure : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
 
-	creator: Mapped[User] = relationship(back_populates="topic")
-	translations: Mapped[list[TopicTranslation]] = relationship(back_populates="topic", cascade="all, delete-orphan")
-
-	category: Mapped["Category"] = relationship(back_populates="topics")
-
-	tags: Mapped[list[Tag]] = relationship(
-		secondary="tags_in_topic",
-		back_populates="topic"
-	)
-
+	creator        : Mapped[User] = relationship(back_populates="topic")
+	text_data      : Mapped[list[TopicText]] = relationship(back_populates="topic", cascade="all, delete-orphan")
+	category       : Mapped["Category"] = relationship(back_populates="topics")
+	tags           : Mapped[list[Tag]] = relationship(back_populates="topic")
 	media_object   : Mapped[list[MediaObject]] = relationship(back_populates="topic", foreign_keys="[MediaObject.used_topic_id]")
-	links          : Mapped[list[TopicLink]]   = relationship(back_populates="topic", cascade="all, delete-orphan")
 
 
-class TopicTranslation(Base):
+class TopicText(Base):
 	__tablename__ = "topic_translations"
 
 	id               : Mapped[int] = mapped_column(primary_key=True)
 	translation_id   : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
 	topic_id         : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), nullable=False)
 	creator_user_id  : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-	parse_mode       : Mapped[ParseMode] = mapped_column(SqlEnum(ParseMode, native_enum=False), nullable=False)
 	last_edited_by   : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-	text             : Mapped[str] = mapped_column(Text, nullable=False)
+
+	json_text        : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
 	first            : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
-	translation      : Mapped[Translation] = relationship(back_populates="topic_translations")
+	translation_code : Mapped[TranslationCode] = relationship(back_populates="topic_translations")
 	topic            : Mapped[Topic] = relationship(back_populates="translations")
 	user: Mapped[User] = relationship(
 		back_populates="topic_translations",
@@ -141,53 +133,9 @@ class Tag(Base):
 	name           : Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 	description    : Mapped[str] = mapped_column(Text)
 
-	topic: Mapped[list[Topic]] = relationship(
-		secondary="tags_in_topic",
+	topic: Mapped[Topic] = relationship(
 		back_populates="tags"
 	) 
-
-
-class TagInTopic(Base):
-	__tablename__ = "tags_in_topic"
-
-	topic_id   : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), primary_key=True)
-	tag_id     : Mapped[int] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
-
-
-class TopicLink(Base):
-	__tablename__ = "topic_links"
-
-	id         : Mapped[int] = mapped_column(primary_key=True)
-	topic_id   : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), nullable=False)
-	link_name  : Mapped[str] = mapped_column(String(200), nullable=False)
-	link_url   : Mapped[str] = mapped_column(String(500), nullable=False)
-	away       : Mapped[bool] = mapped_column(Boolean, default=False)
-
-	topic: Mapped[Topic] = relationship(back_populates="links")
-
-
-class Audit(Base):
-	__tablename__ = "audit"
-
-	id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-	action_type      : Mapped[ActionType] = mapped_column(SqlEnum(ActionType, native_enum=False), nullable=False)
-	user_id          : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-	timestamp        : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
-	reason           : Mapped[str] = mapped_column(Text, nullable=True)
-
-	user: Mapped[User] = relationship(back_populates="audit_log")
-	effected_object: Mapped[list[AuditEffectedObject]] = relationship(back_populates="audit")
-
-
-class AuditEffectedObject(Base):
-	__tablename__ = "audit_effected_objects"
-
-	id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-	audit_id         : Mapped[uuid.UUID] = mapped_column(ForeignKey("audit.id", ondelete="CASCADE"), nullable=False)
-	object_type      : Mapped[ObjectType] = mapped_column(SqlEnum(ObjectType, native_enum=False), nullable=False)
-	object_id        : Mapped[int] = mapped_column(Integer, nullable=False)
-
-	audit: Mapped[Audit] = relationship(back_populates="effected_object")
 
 
 class MediaObject(Base):
