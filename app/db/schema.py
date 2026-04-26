@@ -79,7 +79,6 @@ class Topic(Base):
 	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
 	json_structure     : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
-	gen_text_structure : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
 
 	creator        : Mapped[User] = relationship(back_populates="topic")
 	text_data      : Mapped[list[TopicText]] = relationship(back_populates="topic", cascade="all, delete-orphan")
