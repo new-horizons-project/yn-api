@@ -8,7 +8,7 @@ pydantic
 asyncpg
 colorama
 alembic
-psycopg2
+psycopg2-binary
 user-agents
 pillow
 celery[redis]

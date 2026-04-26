@@ -29,25 +29,25 @@ async def login(request: Request, response: Response, form: OAuth2PasswordReques
 	if not user:
 		raise HTTPException(
 			status_code=400, 
-			detail="User not found"
+			detail="USER_UNAVAILABLE"
 		)
 	
 	if user.is_disabled: 
 		raise HTTPException(
 			status_code=403,
-			detail="User is disabled"
+			detail="USER_UNAVAILABLE"
 		)
 
 	if not utils.security.verify_password(form.password, user.password_hash):
 		raise HTTPException(
 			status_code=400, 
-			detail="Incorrect password"
+			detail="INCORRECT_CREDENTIALS"
 		)
 	
 	if user.force_password_change:
 		raise HTTPException(
 			status_code=403, 
-			detail="User must change password"
+			detail="USER_MUST_CHANGE_PASSWORD"
 		)
 
 	access_token = create_access_token(sub=str(user.id))
