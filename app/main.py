@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from colorama import Fore, Style
 from user_agents import parse
 
-from .db import init_db, get_session, users, topic, media, application_parameter as ap, tasks as tasks_db
+from .db import init_db, get_session, users, media, application_parameter as ap, tasks as tasks_db#, topic
 from . import __version__, __release_subname__, config, tasks, routers
 
 
@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
 		await ap.init_ap(session)
 		await init_config(session)
 		await users.create_root_user(session)
-		await topic.create_base_translation(session)
+		# await topic.create_base_translation(session)
 		await media.init_media(session)
 		await tasks_db.init_tasks(session)
 		await tasks.schedule_tasks(session)
@@ -94,8 +94,8 @@ app.include_router(routers.auth_router)
 app.include_router(routers.user_router)
 app.include_router(routers.admin_router)
 app.include_router(routers.user_router_public)
-app.include_router(routers.topic_router)
-app.include_router(routers.topic_router_public)
+# app.include_router(routers.topic_router)
+# app.include_router(routers.topic_router_public)
 app.include_router(routers.tag_router)
 app.include_router(routers.tag_router_public)
 app.include_router(routers.translation_codes_router)

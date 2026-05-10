@@ -19,8 +19,8 @@ from ..schema.topics import (
 	TopicCreateRequst,
 	TopicTextBase,
 	TopicTextCreated,
-	TranslationCreateRequst,
-	TranslationEditRequest,
+	#TranslationCreateRequst,
+	#TranslationEditRequest,
 )
 from ..schema.translation_code import Translation
 from ..utils.security import hash_topic_name
