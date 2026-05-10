@@ -24,7 +24,7 @@ async def media_exist(db: AsyncSession, cover_image_id: int) -> int | None:
 	)
 
 
-async def add_media(db: AsyncSession, user_id: uuid.UUID, topic_id: int | None, file: UploadFile, content_type: MediaType,
+async def add_media(db: AsyncSession, user_id: uuid.UUID, file: UploadFile, content_type: MediaType,
 				    generate_types: list[MediaSize] | None = None, trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + (file.filename or '')
 
@@ -40,7 +40,6 @@ async def add_media(db: AsyncSession, user_id: uuid.UUID, topic_id: int | None, 
 		uploaded_by_user_id = user_id,
 		sha256_hash_original = hashlib.sha256(original_file.getvalue()).hexdigest(),
 		used_user_id = user_id if content_type == MediaType.user_avatar else None,
-		used_topic_id = topic_id,
 	)
 
 	if generate_types is None:
@@ -98,7 +97,6 @@ async def init_media(db: AsyncSession):
 
 	media = await add_media(
 		db,
-		topic_id = None,
 		user_id = user_id,
 		file = UploadFile(
 			filename="logo.png",
@@ -120,7 +118,6 @@ async def init_media(db: AsyncSession):
 
 	darkMedia = await add_media(
 		db,
-		topic_id = None,
 		user_id = user_id,
 		file = UploadFile(
 			filename="logo_dark.png",
@@ -147,7 +144,6 @@ async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = F
 		.options(
 			selectinload(schema.MediaObject.user_uploader),
 			selectinload(schema.MediaObject.user_owner),
-			selectinload(schema.MediaObject.topic)
 		)
 	)
 
