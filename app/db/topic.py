@@ -1,15 +1,20 @@
 import uuid
-from typing import Optional
 from datetime import datetime, timezone
+from typing import Sequence
 
 from fastapi import HTTPException
-from sqlalchemy import delete, exists, insert, select, update
+from sqlalchemy import delete, exists, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db.enums import EntityType
-from ..redis.cache import category_cache, topic_cache, topic_translation_cache, tag_cache
-from ..schema import category, topics, tag
+from ..redis.cache import (
+	category_cache,
+	tag_cache,
+	topic_cache,
+	topic_translation_cache,
+)
+from ..schema import category, tag, topics
 from ..schema.topics import (
 	TopicCreateRequst,
 	TopicTextBase,
@@ -22,6 +27,54 @@ from ..utils.security import hash_topic_name
 from . import schema
 
 
+# SELECT
+async def search_topics(
+	search: str | None,
+	tags:   str | None,
+	page:   int,
+	limit:  int,
+	sort:   str,
+	order:  str,
+	db: AsyncSession,
+) -> topics.PaginatedTopics:
+	stmt = select(schema.Topic).where(schema.Topic.translations.any())
+	if search:
+		stmt = stmt.where(schema.Topic.name.ilike(f"%{search}%"))
+
+	if tags:
+		tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+		if tag_list:
+			stmt = stmt.where(
+				exists()
+				.where(schema.TagInTopic.topic_id == schema.Topic.id,)
+				.where(
+					schema.TagInTopic.tag_id.in_(
+						select(schema.Tag.id).where(schema.Tag.name.in_(tag_list))
+					)
+				)
+			)
+
+	sort_column = schema.Topic.name if sort == "title" else schema.Topic.created_at
+
+	if order == "desc":
+		sort_column = sort_column.desc()
+	stmt = stmt.order_by(sort_column)
+
+	total = await db.scalar(
+		select(func.count())
+		.select_from(stmt.subquery())
+	) or 0
+
+	offset = (page - 1) * limit
+	stmt = stmt.offset(offset).limit(limit)
+
+	result = await db.scalars(stmt)
+
+	paginated_topics = [topics.TopicBase.model_validate(row) for row in result.all()]
+	return topics.PaginatedTopics(
+		total  = total,
+		topics = paginated_topics,
+	)
 async def topic_exists_by_name(topic_name: str, db: AsyncSession) -> bool | None:
 	return await db.scalar(
 		select(
@@ -70,7 +123,7 @@ async def get_topic_category(topic_id: int, db: AsyncSession) -> category.Catego
 
 	if result is None:
 		return None
-	
+
 	topic_category = category.CategoryBase.model_validate(result)
 
 	if count >= settings.CACHE_THRESHOLD:
@@ -159,7 +212,7 @@ async def get_list_topic_tags(topic_id: int, db: AsyncSession) -> list[tag.TagBa
 		cache = await topic_cache.get_relations(topic_id, EntityType.tag)
 		if cache:
 			return cache
-	
+
 	result = await db.scalars(
 		select(schema.Tag)
 		.join(schema.TagInTopic, schema.TagInTopic.tag_id == schema.Tag.id)
@@ -216,7 +269,12 @@ async def add_translation(
 		last_edited_by    = user_id
 	)
 
-	has_translation: bool = await db.scalar(select(exists().where(schema.TopicText.topic_id == topic_id)))
+	has_translation = await db.scalar(
+		select(
+			exists()
+			.where(schema.TopicTranslation.topic_id == topic_id)
+		)
+	)
 	new_translation.first = not has_translation
 
 	db.add(new_translation)
@@ -299,7 +357,7 @@ async def edit_translation(
 
 	if not row:
 		return None
-	
+
 	if row.imported and row.first:
 		raise HTTPException(409, "Editing not allowed")
 
@@ -365,5 +423,4 @@ async def get_headless_topics(db: AsyncSession) -> Optional[list[schema.Topic]]:
 			~schema.Topic.translations.any()
 		)
 	)
-
 	return topics.scalars().all()

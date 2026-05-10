@@ -1,13 +1,13 @@
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .. import config
+from ..db import get_session,  media as media_db
+from ..db.enums import MediaSize, MediaType, UserRoles
+from ..schema.media import MediaInformation, RelatedObjects
 from ..utils.jwt import jwt_auth_check_permission
 from ..utils.media import verify_image_by_path
-from ..db       import get_session, media as media_db
-from ..db.enums import MediaSize, UserRoles, MediaType
-from ..schema.media   import MediaInformation, RelatedObjects
-from .. import config
 
 router = APIRouter(prefix="/static", tags=["Static Media"])
 
@@ -18,7 +18,7 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")
-	
+
 	size_map = {
 		MediaSize.original: ("", obj.sha256_hash_original, True),
 		MediaSize.thumbnail: ("thumbnail_", obj.sha256_hash_thumb, True),
@@ -28,10 +28,10 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 	}
 
 	prefix, sha256_hash, available = size_map[size]
-	
-	if not available:
+
+	if not available or sha256_hash is None:
 		raise HTTPException(status_code=404, detail="Media size not found")
-	
+
 	filepath = f"{config.settings.STATIC_MEDIA_FOLDER}/{prefix}{obj.file_path}"
 
 	try:
@@ -39,7 +39,7 @@ async def get_media_by_id(media_id: int, size: MediaSize = MediaSize.original, d
 			raise HTTPException(status_code=404, detail="Media not found (verification failed)")
 	except FileNotFoundError:
 		raise HTTPException(status_code=404, detail="Media not found (file missing)")
-	
+
 	return Response(content=open(filepath, "rb").read(), media_type="image/png")
 
 
@@ -50,7 +50,7 @@ async def get_media_information(media_id: int, db: AsyncSession = Depends(get_se
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")
-	
+
 	return obj
 
 
@@ -61,7 +61,7 @@ async def get_related_objects(media_id: int, db: AsyncSession = Depends(get_sess
 
 	if obj is None:
 		raise HTTPException(status_code=404, detail="Media not found")
-	
+
 	if obj.obj_type == MediaType.system:
 		owner = "system"
 

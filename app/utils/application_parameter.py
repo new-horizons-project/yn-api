@@ -1,6 +1,6 @@
 from os import path
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 import uuid
 import json
@@ -56,7 +56,7 @@ def validate_data(data: str, data_type: enums.AP_type):
 	return True
 
 
-def parse_parameters(data: dict, path: str = "") -> List[ApplicationParameterDC]:
+def parse_parameters(data: dict[str, Any], path: str = "") -> List[ApplicationParameterDC]:
 	params: List[ApplicationParameterDC] = []
 	
 	for key, value in data.items():

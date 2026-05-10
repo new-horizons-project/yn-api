@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
-import uuid
 
 from sqlalchemy import (
 	String, Text, Enum as SqlEnum, ForeignKey, Boolean, DateTime, Integer
@@ -12,6 +13,7 @@ from sqlalchemy.orm import (
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from .enums import UserRoles, DisplayMode, MediaType, AP_kind,  AP_type, AP_visibility
+
 
 class Base(DeclarativeBase):
 	pass
@@ -134,7 +136,7 @@ class Tag(Base):
 
 	topic: Mapped[Topic] = relationship(
 		back_populates="tags"
-	) 
+	)
 
 
 class MediaObject(Base):
@@ -187,7 +189,7 @@ class APValue(Base):
 	ap_id    : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),
 		ForeignKey("application_parameters.id", ondelete="CASCADE"), nullable=False,
 	)
-	
+
 	parameter: Mapped["ApplicationParameter"] = relationship(back_populates="value")
 
 

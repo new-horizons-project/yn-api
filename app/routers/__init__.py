@@ -1,12 +1,17 @@
-from .auth  import router as auth_router
-from .tag   import router as tag_router, router_public as tag_router_public
-from .topic import router as topic_router, router_public as topic_router_public
-from .users import router as user_router, router_public as user_router_public
 from .admin import router as admin_router
-from .translation_codes import router as translation_codes_router
+from .application_parameter import router as ap_router
+from .application_parameter import router_public as ap_router_public
+from .auth import router as auth_router
+from .category import router as category_router
+from .category import router_public as category_router_public
 from .media import router as media_router
-from .application_parameter import router as ap_router, router_public as ap_router_public
-from .category import router as category_router, router_public as category_router_public
+from .tag import router as tag_router
+from .tag import router_public as tag_router_public
+from .topic import router as topic_router
+from .topic import router_public as topic_router_public
+from .translation_codes import router as translation_codes_router
+from .users import router as user_router
+from .users import router_public as user_router_public
 
 __all__ = (
 	"auth_router",

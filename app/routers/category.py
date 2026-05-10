@@ -1,11 +1,10 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import category as category_db
-from ..db import get_session, schema
+from ..db import get_session
 from ..db.enums import UserRoles
 from ..schema import category
 from ..utils.jwt import jwt_auth_check_permission
@@ -26,25 +25,7 @@ async def search_categories(
     per_page: int = Query(20, ge=1, le=20, description="Items per page (max 20)"),
     db: AsyncSession = Depends(get_session)
 ) -> category.PaginatedCategories:
-	stmt = select(schema.Category)
-	if search:
-		stmt = stmt.where(schema.Category.name.ilike(f"%{search}%"))
-
-	total = await db.scalar(
-		select(func.count())
-		.select_from(stmt.subquery())
-	) or 0
-
-	offset = (page - 1) * per_page
-	stmt = stmt.offset(offset).limit(per_page)
-
-	result = await db.scalars(stmt)
-	paginated_categories = [category.CategoryBase.model_validate(row) for row in result.all()]
-
-	return category.PaginatedCategories(
-		total = total,
-		categories = paginated_categories,
-	)
+	return await category_db.search_categories(search, page, per_page, db)
 
 @router.post("/create")
 async def create_category(req: category.CategoryCreateRequst, db: AsyncSession = Depends(get_session)):
