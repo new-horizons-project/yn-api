@@ -74,19 +74,60 @@ class Topic(Base):
 	__tablename__ = "topic"
 
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-	name               : Mapped[str] = mapped_column(String(200), nullable=False)
 	created_at         : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 	edited_at          : Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 	creator_user_id    : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-	cover_image_id     : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
 	json_structure     : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
+	basic_langage_t_code_id : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
 
 	creator        : Mapped[User] = relationship(back_populates="topic")
 	text_data      : Mapped[list[TopicText]] = relationship(back_populates="topic", cascade="all, delete-orphan")
-	category       : Mapped["Category"] = relationship(back_populates="topics")
+	category       : Mapped[Category] = relationship(back_populates="topics")
 	tags           : Mapped[list[Tag]] = relationship(back_populates="topic")
-	media_object   : Mapped[list[MediaObject]] = relationship(back_populates="topic", foreign_keys="[MediaObject.used_topic_id]")
+	translation_code : Mapped[TranslationCode] = relationship(back_populates="topic_translations")
+	translation_entity : Mapped[Optional[TranslationEntity]] = relationship(back_populates="topic", cascade="all, delete-orphan")
+
+
+class TranslationEntity(Base):
+	__tablename__ = "translation_entity"
+
+	id                  : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	translation_name    : Mapped[str] = mapped_column(String(200), nullable=False)
+	topic_name          : Mapped[str] = mapped_column(String(200), nullable=False)
+	community           : Mapped[bool] = mapped_column(Boolean, nullable=False)
+	topic_id            : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), unique=True)
+	translation_code_id : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
+	cover_image_id      : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
+	
+	topic : Mapped[Topic] = relationship(back_populates="translation_entity")
+	translation_code : Mapped[TranslationCode] = relationship(back_populates="translation_entities")
+	cover_image      : Mapped[Optional[MediaObject]] = relationship(foreign_keys=[cover_image_id])
+
+	translated_texts : Mapped[list[TranslatedText]] = relationship(back_populates="translation_entity", cascade="all, delete-orphan")
+	translated_images : Mapped[list[TranslatedImage]] = relationship(back_populates="translation_entity", cascade="all, delete-orphan")
+	
+
+class TranslatedText(Base):
+	__tablename__ = "translated_text"
+
+	id                     : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	translation_entity_id : Mapped[str] = mapped_column(ForeignKey("translation_entity.id", ondelete="CASCADE"), nullable=False)
+	internal_block_id      : Mapped[int] = mapped_column(Integer, nullable=False)
+
+	translation_entity : Mapped["TranslationEntity"] = relationship(back_populates="translated_texts")
+
+
+class TranslatedImage(Base):
+	__tablename__ = "translated_image"
+
+	id                     : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	image_id               : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
+	translation_entity_id : Mapped[str] = mapped_column(ForeignKey("translation_entity.id", ondelete="CASCADE"), nullable=False)
+	internal_block_id      : Mapped[int] = mapped_column(Integer, nullable=False)
+
+	translation_entity     : Mapped[TranslationEntity] = relationship(back_populates="translated_images")
+	image                  : Mapped[Optional["MediaObject"]] = relationship(foreign_keys=[image_id])
 
 
 class TopicText(Base):
@@ -155,16 +196,11 @@ class MediaObject(Base):
 	has_medium             : Mapped[bool] = mapped_column(Boolean, default=False)
 	has_large              : Mapped[bool] = mapped_column(Boolean, default=False)
 
-	uploaded_by_user_id    : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=False)
-	used_topic_id          : Mapped[Optional[int]] = mapped_column(ForeignKey("topic.id", ondelete="SET NULL"), nullable=True)
-	used_user_id           : Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+	uploaded_by_user_id        : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=False)
+	used_user_id               : Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-	user_owner       : Mapped[Optional[User]] = relationship(back_populates="media_uploader", foreign_keys=[used_user_id])
-	user_uploader    : Mapped[User] = relationship(back_populates="media_owner", foreign_keys=[uploaded_by_user_id])
-	topic            : Mapped[Optional[Topic]] = relationship(
-		back_populates  = "media_object",
-		foreign_keys    = [used_topic_id]
-	)
+	user_owner         : Mapped[Optional[User]] = relationship(back_populates="media_uploader", foreign_keys=[used_user_id])
+	user_uploader      : Mapped[User] = relationship(back_populates="media_owner", foreign_keys=[uploaded_by_user_id])
 
 
 class ApplicationParameter(Base):
