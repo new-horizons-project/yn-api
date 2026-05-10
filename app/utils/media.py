@@ -37,8 +37,7 @@ def verify_image_by_path(file_path: str, sha256_hash: str) -> bool:
 def trim_transparent(image: Image.Image) -> Image.Image:
     if image.mode != "RGBA":
         image = image.convert("RGBA")
-    
-    # Получаем альфа-канал (прозрачность)
+
     bbox = image.getchannel("A").getbbox()
     if bbox:
         image = image.crop(bbox)

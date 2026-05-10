@@ -24,7 +24,7 @@ async def media_exist(db: AsyncSession, cover_image_id: int) -> int | None:
 	)
 
 
-async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, file: UploadFile, content_type: MediaType,
+async def add_media(db: AsyncSession, user_id: uuid.UUID, topic_id: int | None, file: UploadFile, content_type: MediaType,
 				    generate_types: list[MediaSize] | None = None, trim: bool = True) -> schema.MediaObject:
 	file_name = "uuid" + str(uuid.uuid4()) + "_" + (file.filename or '')
 
@@ -37,9 +37,9 @@ async def add_media(db: AsyncSession, user: schema.User, topic_id: int | None, f
 	media = schema.MediaObject(
 		file_path = file_name,
 		obj_type = content_type,
-		uploaded_by_user_id = user.id,
+		uploaded_by_user_id = user_id,
 		sha256_hash_original = hashlib.sha256(original_file.getvalue()).hexdigest(),
-		used_user_id = user.id if content_type == MediaType.user_avatar else None,
+		used_user_id = user_id if content_type == MediaType.user_avatar else None,
 		used_topic_id = topic_id,
 	)
 
@@ -86,6 +86,7 @@ async def init_media(db: AsyncSession):
 		return
 
 	root_user = await get_root_user(db)
+	user_id = root_user.id
 
 	if not root_user:
 		raise Exception("Root user not found")
@@ -98,7 +99,7 @@ async def init_media(db: AsyncSession):
 	media = await add_media(
 		db,
 		topic_id = None,
-		user = root_user,
+		user_id = user_id,
 		file = UploadFile(
 			filename="logo.png",
 			file=BytesIO(logo_data)
@@ -113,6 +114,27 @@ async def init_media(db: AsyncSession):
 	)
 
 	await set_default_value(db, "application.ui.logo_media_id", media.id)
+
+	with open("./media/logo_dark.png", "rb") as f:
+		logo_data = f.read()
+
+	darkMedia = await add_media(
+		db,
+		topic_id = None,
+		user_id = user_id,
+		file = UploadFile(
+			filename="logo_dark.png",
+			file=BytesIO(logo_data)),
+		content_type = MediaType.system,
+		generate_types=[
+			MediaSize.small,
+			MediaSize.medium,
+			MediaSize.large
+		],
+		trim=True
+	)
+
+	await set_default_value(db, "application.ui.logo_dark_media_id", darkMedia.id)
 
 
 async def get_media_by_id(db: AsyncSession, media_id: int, preload_all: bool = False) -> schema.MediaObject | None:
