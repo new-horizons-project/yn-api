@@ -29,20 +29,20 @@ class User(Base):
 	role                     : Mapped[UserRoles] = mapped_column(SqlEnum(UserRoles, native_enum=False), default=UserRoles.user)
 	is_disabled              : Mapped[bool] = mapped_column(Boolean, default=False)
 	force_password_change    : Mapped[bool] = mapped_column(Boolean, default=False)
+	#avatar_media_id          : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 
-	""" topic                        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan") """
+	topic                        : Mapped[list[Topic]] = relationship(back_populates="creator", cascade="all, delete-orphan")
 	tokens                       : Mapped[list[JWT_Token]] = relationship(back_populates="user", cascade="all, delete-orphan")
 	media_owner                  : Mapped[list[MediaObject]] = relationship(back_populates="user_uploader", foreign_keys="[MediaObject.uploaded_by_user_id]")
 	media_uploader               : Mapped[list[MediaObject]] = relationship(back_populates="user_owner", foreign_keys="[MediaObject.used_user_id]")
-	#topic_translations: Mapped[list[TopicText]] = relationship(
-	#	back_populates="user",
-	#	foreign_keys="[TopicText.creator_user_id]"
-	#)
-	#topic_translations_editor: Mapped[list[TopicText]] = relationship(
-	#	back_populates="user_last_editor",
-	#	foreign_keys="[TopicText.last_edited_by]"
-	#)
-
+	topic_translations: Mapped[list[TopicText]] = relationship(
+		back_populates="user",
+		foreign_keys="[TopicText.creator_user_id]"
+	)
+	topic_translations_editor: Mapped[list[TopicText]] = relationship(
+		back_populates="user_last_editor",
+		foreign_keys="[TopicText.last_edited_by]"
+	)
 
 class JWT_Token(Base):
 	__tablename__ = "jwt_tokens"
@@ -67,10 +67,11 @@ class TranslationCode(Base):
 	translation_code   : Mapped[str] = mapped_column(String(2), unique=True, nullable=False, index=True)
 	full_name          : Mapped[str] = mapped_column(String(100), nullable=False)
 
-	# topic_translations: Mapped[list[TopicText]] = relationship(back_populates="translation", cascade="all, delete-orphan")
+	topic_translations : Mapped[list[TopicText]] = relationship(back_populates="translation_code", cascade="all, delete-orphan")
+	topics : Mapped[list[Topic]] = relationship(back_populates="translation_code")
+	translation_entities :  Mapped[list[TranslationEntity]] = relationship(back_populates="translation_code")
 
-
-""" class Topic(Base):
+class Topic(Base):
 	__tablename__ = "topic"
 
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -84,8 +85,8 @@ class TranslationCode(Base):
 	creator        : Mapped[User] = relationship(back_populates="topic")
 	text_data      : Mapped[list[TopicText]] = relationship(back_populates="topic", cascade="all, delete-orphan")
 	category       : Mapped[Category] = relationship(back_populates="topics")
-	tags           : Mapped[list[Tag]] = relationship(back_populates="topic")
-	translation_code : Mapped[TranslationCode] = relationship(back_populates="topic_translations")
+	"""tags           : Mapped[list[Tag]] = relationship(back_populates="topic")"""
+	translation_code : Mapped[TranslationCode] = relationship(back_populates="topics")
 	translation_entity : Mapped[Optional[TranslationEntity]] = relationship(back_populates="topic", cascade="all, delete-orphan")
 
 
@@ -130,7 +131,7 @@ class TranslatedImage(Base):
 	image                  : Mapped[Optional["MediaObject"]] = relationship(foreign_keys=[image_id])
 
 
-""" class TopicText(Base):
+class TopicText(Base):
 	__tablename__ = "topic_translations"
 
 	id               : Mapped[int] = mapped_column(primary_key=True)
@@ -143,7 +144,7 @@ class TranslatedImage(Base):
 	first            : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
 	translation_code : Mapped[TranslationCode] = relationship(back_populates="topic_translations")
-	topic            : Mapped[Topic] = relationship(back_populates="translations")
+	topic            : Mapped[Topic] = relationship(back_populates="text_data")
 	user: Mapped[User] = relationship(
 		back_populates="topic_translations",
 		foreign_keys=[creator_user_id]
@@ -151,7 +152,7 @@ class TranslatedImage(Base):
 	user_last_editor: Mapped[User] = relationship(
 		back_populates="topic_translations_editor",
 		foreign_keys=[last_edited_by]
-	) """
+	)
 
 
 class Category(Base):
@@ -162,10 +163,10 @@ class Category(Base):
 	description    : Mapped[str] = mapped_column(Text)
 	display_mode   : Mapped[DisplayMode] = mapped_column(SqlEnum(DisplayMode, native_enum=False))
 
-	""" topics: Mapped[list[Topic]] = relationship(
+	topics: Mapped[list[Topic]] = relationship(
         back_populates="category",
         cascade="all, delete-orphan"
-    ) """
+    )
 
 
 class Tag(Base):
