@@ -61,7 +61,7 @@ class JWT_Token(Base):
 
 
 class TranslationCode(Base):
-	__tablename__ = "translations"
+	__tablename__ = "translation_code"
 
 	id                 : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	translation_code   : Mapped[str] = mapped_column(String(2), unique=True, nullable=False, index=True)
@@ -80,7 +80,7 @@ class Topic(Base):
 	creator_user_id    : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	category_id        : Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
 	json_structure     : Mapped[JSONB] = mapped_column(JSONB, nullable=False)
-	basic_langage_t_code_id : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
+	basic_langage_t_code_id : Mapped[int] = mapped_column(ForeignKey("translation_code.id", ondelete="CASCADE"), nullable=False)
 
 	creator        : Mapped[User] = relationship(back_populates="topic")
 	text_data      : Mapped[list[TopicText]] = relationship(back_populates="topic", cascade="all, delete-orphan")
@@ -98,7 +98,7 @@ class TranslationEntity(Base):
 	topic_name          : Mapped[str] = mapped_column(String(200), nullable=False)
 	community           : Mapped[bool] = mapped_column(Boolean, nullable=False)
 	topic_id            : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), unique=True)
-	translation_code_id : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
+	translation_code_id : Mapped[int] = mapped_column(ForeignKey("translation_code.id", ondelete="CASCADE"), nullable=False)
 	cover_image_id      : Mapped[Optional[int]] = mapped_column(ForeignKey("media_object.id", ondelete="SET NULL"), nullable=True)
 	
 	topic : Mapped[Topic] = relationship(back_populates="translation_entity")
@@ -135,7 +135,7 @@ class TopicText(Base):
 	__tablename__ = "topic_translations"
 
 	id               : Mapped[int] = mapped_column(primary_key=True)
-	translation_id   : Mapped[int] = mapped_column(ForeignKey("translations.id", ondelete="CASCADE"), nullable=False)
+	translation_id   : Mapped[int] = mapped_column(ForeignKey("translation_code.id", ondelete="CASCADE"), nullable=False)
 	topic_id         : Mapped[int] = mapped_column(ForeignKey("topic.id", ondelete="CASCADE"), nullable=False)
 	creator_user_id  : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 	last_edited_by   : Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))

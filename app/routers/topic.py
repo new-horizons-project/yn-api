@@ -24,7 +24,6 @@ router = APIRouter(prefix="/topic", tags=["Topic"],
 
 router_public = APIRouter(prefix="/topic", tags=["Topic"])
 
-# TODO: Full logic rework
 @router_public.get('/', response_model = topics.PaginatedTopics)
 async def search_topics(
 	search: str | None = Query(None, description="Search in topic title"),
@@ -38,7 +37,10 @@ async def search_topics(
 	return await topic_db.search_topics(search, tags, page, limit, sort, order, db)
 
 
-@router.post("/create")
+
+
+
+""" @router.post("/create")
 async def create_topic(
 	topic: topics.TopicCreateRequst,
 	user_id: uuid.UUID = Depends(jwt_extract_user_id),
@@ -226,3 +228,4 @@ async def detach_tag_from_topic(
 @router.get("/headless", response_model=list[topics.TopicBase])
 async def get_headless_topics(db: AsyncSession = Depends(get_session)):
 	return await topic_db.get_headless_topics(db)
+ """
